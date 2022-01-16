@@ -1,0 +1,1 @@
+g++ -Wall -g main.cpp emulator.cpp -o main
