@@ -2,6 +2,9 @@
 #include <stdbool.h>
 #include <termios.h>
 #include <cstring>
+#include <vector>
+#include <ostream>
+#include <iostream>
 
 void PrintHeader(DOS_HEADER *header)
 {
@@ -25,7 +28,7 @@ void PrintHeader(DOS_HEADER *header)
 
 int DOSEmulator::CalculateStartAddress()
 {
-    return (512 * header->nblocks) - (16 * header->hdrsize);
+    return (16 * header->hdrsize);
 }
 
 void DOSEmulator::PrintStack()
@@ -51,13 +54,13 @@ void DOSEmulator::PrintStack()
     fprintf(stdout, "\t\tGS: %02x %02x\n", special_registers[GS][0], special_registers[GS][1]);
 
     fprintf(stdout, "\tFlags:\n");
-    fprintf(stdout, "\t\tCF: %d",   flags[CF] ? 1 : 0);
-    fprintf(stdout, "\t\tPF: %d",   flags[PF] ? 1 : 0);
-    fprintf(stdout, "\t\tAF: %d",   flags[AF] ? 1 : 0);
+    fprintf(stdout, "\t\tCF: %d", flags[CF] ? 1 : 0);
+    fprintf(stdout, "\t\tPF: %d", flags[PF] ? 1 : 0);
+    fprintf(stdout, "\t\tAF: %d", flags[AF] ? 1 : 0);
     fprintf(stdout, "\t\tZF: %d\n", flags[ZF] ? 1 : 0);
-    fprintf(stdout, "\t\tSF: %d",   flags[SF] ? 1 : 0);
-    fprintf(stdout, "\t\tIF: %d",   flags[IF] ? 1 : 0);
-    fprintf(stdout, "\t\tDF: %d",   flags[DF] ? 1 : 0);
+    fprintf(stdout, "\t\tSF: %d", flags[SF] ? 1 : 0);
+    fprintf(stdout, "\t\tIF: %d", flags[IF] ? 1 : 0);
+    fprintf(stdout, "\t\tDF: %d", flags[DF] ? 1 : 0);
     fprintf(stdout, "\t\tOF: %d\n", flags[OF] ? 1 : 0);
 }
 
@@ -134,7 +137,7 @@ void DOSEmulator::SetModMemVal(short val, char op)
         break;
     }
     default:
-        fprintf(stdout, "Not yet Implemented\n");
+        fprintf(stdout, "Not yet Implemented, set mod mem val\n");
         break;
     }
 }
@@ -144,6 +147,22 @@ short DOSEmulator::GetModMemVal8(char op)
     char val = 0;
     switch (GetModValue(op))
     {
+    case 0x0:
+    {
+        switch (GetModRegister(op))
+        {
+        case 0x6:
+        {
+            short pos = (opcodes[ip++] & 0xFF) + ((opcodes[ip++] & 0xFF) << 8);
+            val = (GetDataStart()[pos++] & 0xFF) + ((GetDataStart()[ip] & 0xFF) << 8);
+            break;
+        }
+        default:
+            fprintf(stdout, "Not yet Implemented: %d\n", GetModRegister(op));
+            break;
+        }
+        break;
+    }
     case 0x2:
     {
         short offset = (opcodes[ip++] & 0xFF) + ((opcodes[ip++] & 0xFF) << 8);
@@ -173,29 +192,106 @@ short DOSEmulator::GetModMemVal8(char op)
     return val;
 }
 
+void DOSEmulator::SetModMemVal8(char val, char op)
+{
+    switch (GetModValue(op))
+    {
+    case 0x2:
+    {
+        short offset = (opcodes[ip++] & 0xFF) + ((opcodes[ip++] & 0xFF) << 8);
+        switch (GetModRegister(op))
+        {
+        case 0x0:
+        {
+            short bx_val = ((registers[BX][BH] << 8) & 0xFF) + (registers[BX][BL] & 0xFF);
+            short si_val = ((registers[SI][0] << 8) & 0xFF) + (registers[SI][1] & 0xFF);
+            GetDataStart()[offset + bx_val + si_val] = val;
+            break;
+        }
+        case 0x1:
+        {
+            short bx_val = ((registers[BX][BH] << 8) & 0xFF) + (registers[BX][BL] & 0xFF);
+            short di_val = ((registers[DI][0] << 8) & 0xFF) + (registers[DI][1] & 0xFF);
+            GetDataStart()[offset + bx_val + di_val] = val;
+            break;
+        }
+        case 0x2:
+        {
+            short bp_val = ((registers[BP][0] << 8) & 0xFF) + (registers[BP][1] & 0xFF);
+            short si_val = ((registers[SI][0] << 8) & 0xFF) + (registers[SI][1] & 0xFF);
+            GetDataStart()[offset + bp_val + si_val] = val;
+            break;
+        }
+        case 0x3:
+        {
+            short bp_val = ((registers[BP][0] << 8) & 0xFF) + (registers[BP][1] & 0xFF);
+            short di_val = ((registers[DI][0] << 8) & 0xFF) + (registers[DI][1] & 0xFF);
+            GetDataStart()[offset + bp_val + di_val] = val;
+            break;
+        }
+        case 0x4:
+        {
+            short si_val = ((registers[SI][0] << 8) & 0xFF) + (registers[SI][1] & 0xFF);
+            GetDataStart()[offset + si_val] = val;
+            break;
+        }
+        case 0x5:
+        {
+            short di_val = ((registers[DI][0] << 8) & 0xFF) + (registers[DI][1] & 0xFF);
+            GetDataStart()[offset + di_val] = val;
+            break;
+        }
+        case 0x6:
+        {
+            short bp_val = ((registers[BP][0] << 8) & 0xFF) + (registers[BP][1] & 0xFF);
+            GetDataStart()[offset + bp_val] = val;
+            break;
+        }
+        case 0x7:
+        {
+            short bx_val = ((registers[BX][BH] << 8) & 0xFF) + (registers[BX][BL] & 0xFF);
+            GetDataStart()[offset + bx_val] = val;
+            break;
+        }
+        default:
+            fprintf(stdout, "Not yet Implemented set mod men val 8: %d\n", GetModRegister(op));
+            break;
+        }
+        break;
+    }
+    case 0x3:
+    {
+        registers[GetModRegister(op)][GetRegister(op)] = val;
+        break;
+    }
+    default:
+        fprintf(stdout, "Not yet Implemented, set mod mem val 8: %02x\n", GetModValue(op));
+        break;
+    }
+}
+
 char getCh()
 {
 
-    struct termios old_kbd_mode;    /* orig keyboard settings   */
+    struct termios old_kbd_mode; /* orig keyboard settings   */
     struct termios new_kbd_mode;
 
-    tcgetattr (0, &old_kbd_mode);
+    tcgetattr(0, &old_kbd_mode);
 
-    memcpy (&new_kbd_mode, &old_kbd_mode, sizeof(struct termios));
+    memcpy(&new_kbd_mode, &old_kbd_mode, sizeof(struct termios));
 
-    new_kbd_mode.c_lflag &= ~(ICANON | ECHO);  /* new kbd flags */
+    new_kbd_mode.c_lflag &= ~(ICANON | ECHO); /* new kbd flags */
     new_kbd_mode.c_cc[VTIME] = 0;
     new_kbd_mode.c_cc[VMIN] = 1;
 
-    tcsetattr (0, TCSANOW, &new_kbd_mode);
+    tcsetattr(0, TCSANOW, &new_kbd_mode);
 
     char ret = fgetc(stdin);
 
     /* reset original keyboard  */
-    tcsetattr (0, TCSANOW, &old_kbd_mode);
+    tcsetattr(0, TCSANOW, &old_kbd_mode);
 
     return ret;
-
 }
 
 void DOSEmulator::PerformInterrupt(char val)
@@ -239,16 +335,16 @@ bool DOSEmulator::CheckIfCarry(char val1, char val2, char operation)
     bool val = false;
     switch (operation)
     {
-        case SUBTRACTION:
-        {
-            // If the first bit is 0 and then becomes 1 we had to carry
-            if (!(val2 & 0x8) && ((val2 - val1) & 0x8) == 8)
-                val = true;
-            break;
-        }
-        default:
-            fprintf(stdout, "Check carry not implemented\n");
-            break;
+    case SUBTRACTION:
+    {
+        // If the first bit is 0 and then becomes 1 we had to carry
+        if (!(val2 & 0x8) && ((val2 - val1) & 0x8) == 8)
+            val = true;
+        break;
+    }
+    default:
+        fprintf(stdout, "Check carry not implemented\n");
+        break;
     }
     return val;
 }
@@ -258,9 +354,9 @@ bool DOSEmulator::CheckIfParity(char val1, char val2, char operation)
     bool val = false;
     switch (operation)
     {
-        default:
-            fprintf(stdout, "Check parity not implemented\n");
-            break;
+    default:
+        fprintf(stdout, "Check parity not implemented\n");
+        break;
     }
     return val;
 }
@@ -270,9 +366,9 @@ bool DOSEmulator::CheckIfAuxiliary(char val1, char val2, char operation)
     bool val = false;
     switch (operation)
     {
-        default:
-            fprintf(stdout, "Check auxiliary not implemented\n");
-            break;
+    default:
+        fprintf(stdout, "Check auxiliary not implemented\n");
+        break;
     }
     return val;
 }
@@ -282,15 +378,15 @@ bool DOSEmulator::CheckIfZero(char val1, char val2, char operation)
     bool val = false;
     switch (operation)
     {
-        case SUBTRACTION:
-        {
-            if (!(val2 - val1))
-                val = true;
-            break;
-        }
-        default:
-            fprintf(stdout, "Check zero not implemented\n");
-            break;
+    case SUBTRACTION:
+    {
+        if (!(val2 - val1))
+            val = true;
+        break;
+    }
+    default:
+        fprintf(stdout, "Check zero not implemented\n");
+        break;
     }
     return val;
 }
@@ -300,15 +396,15 @@ bool DOSEmulator::CheckIfSign(char val1, char val2, char operation)
     bool val = false;
     switch (operation)
     {
-        case SUBTRACTION:
-        {
-            if ((val1 - val2) < 0)
-                val = true;
-            break;
-        }
-        default:
-            fprintf(stdout, "Check sign not implemented\n");
-            break;
+    case SUBTRACTION:
+    {
+        if ((val1 - val2) < 0)
+            val = true;
+        break;
+    }
+    default:
+        fprintf(stdout, "Check sign not implemented\n");
+        break;
     }
     return val;
 }
@@ -318,9 +414,9 @@ bool DOSEmulator::CheckIfInterrupt(char val1, char val2, char operation)
     bool val = false;
     switch (operation)
     {
-        default:
-            fprintf(stdout, "Check interrupt not implemented\n");
-            break;
+    default:
+        fprintf(stdout, "Check interrupt not implemented\n");
+        break;
     }
     return val;
 }
@@ -330,9 +426,9 @@ bool DOSEmulator::CheckIfDirection(char val1, char val2, char operation)
     bool val = false;
     switch (operation)
     {
-        default:
-            fprintf(stdout, "Check direction not implemented\n");
-            break;
+    default:
+        fprintf(stdout, "Check direction not implemented\n");
+        break;
     }
     return val;
 }
@@ -342,15 +438,15 @@ bool DOSEmulator::CheckIfOverflow(char val1, char val2, char operation)
     bool val = false;
     switch (operation)
     {
-        case SUBTRACTION:
-        {
-            if ((val1 - val2) > val1)
-                val = true;
-            break;
-        }
-        default:
-            fprintf(stdout, "Check overflow not implemented\n");
-            break;
+    case SUBTRACTION:
+    {
+        if ((val1 - val2) > val1)
+            val = true;
+        break;
+    }
+    default:
+        fprintf(stdout, "Check overflow not implemented\n");
+        break;
     }
     return val;
 }
@@ -365,7 +461,92 @@ void DOSEmulator::UpdateFlags(char val1, char val2, char operation)
     // flags[IF] = CheckIfInterrupt(val1, val2, operation);
     // flags[DF] = CheckIfDirection(val1, val2, operation);
     flags[OF] = CheckIfOverflow(val1, val2, operation);
+}
 
+std::vector<char *> GetTokens(char *line)
+{
+    int i = 0;
+    int last = 0;
+    std::vector<char *> tokens;
+
+    while (line[i] != '\0')
+    {
+        if (line[i] == ' ' || line[i] == '\n')
+        {
+            line[i] = '\0';
+            char *str = line + last;
+            tokens.push_back(str);
+            last += i + 1;
+        }
+        i++;
+    }
+
+    return tokens;
+}
+
+void DOSEmulator::DebugMenu()
+{
+    fprintf(stdout, "Total Instructions executed: %d\n", instr_executed);
+    fprintf(stdout, "> ");
+
+    char line[256];
+    fgets(line, sizeof(line), stdin);
+
+    while (strcmp(line, "n") & strcmp(line, "next"))
+    {
+        std::vector<char *> commands = GetTokens(line);
+
+        char *command = commands[0];
+
+        if (!(strcmp(command, "h") & strcmp(command, "help")))
+        {
+            fprintf(stdout, "Commands:\n");
+            fprintf(stdout, "\tnext (n):   Step to next instruction\n");
+            fprintf(stdout, "\tstatus (s): Prints status of registers and flags\n");
+            fprintf(stdout, "\tstep (st) <#>: Runs for # amount of instructions\n");
+            fprintf(stdout, "\thelp (h):   Get a list of commands\n");
+        }
+        else if (!(strcmp(command, "s") & strcmp(command, "status")))
+        {
+            PrintStack();
+        }
+        else if (!(strcmp(command, "st") & strcmp(command, "step")))
+        {
+            step = instr_executed + atoi(commands[1]);
+            debug = false;
+            break;
+        }
+        else if (!(strcmp(command, "p") & strcmp(command, "print")))
+        {
+            fprintf(stdout, "Current opcode: %02x\n", opcodes[ip - 1]);
+        }
+        else if (!strcmp(command, "pm"))
+        {
+            int start = atoi(commands[1]);
+            fprintf(stdout, "Memory from %04x:\n", start);
+
+            for (int i = 0; i < 5; i++)
+            {
+                for (int j = 0; j < 16; j++)
+                {
+                    fprintf(stdout, "%02x ", data[start + j + (i * 16)]);
+                }
+                fprintf(stdout, "\n");
+            }
+        }
+        else if (!(strcmp(command, "c") & strcmp(command, "cont")))
+        {
+            debug = false;
+            break;
+        }
+        else
+        {
+            printf("Command %s not found, type h or help for list of commands\n", line);
+        }
+
+        fprintf(stdout, "> ");
+        fgets(line, sizeof(line), stdin);
+    }
 }
 
 void DOSEmulator::RunCode()
@@ -374,6 +555,7 @@ void DOSEmulator::RunCode()
     int instr_count = 0;
 
     ip = 0;
+    instr_executed = 0;
     opcodes = data + startAddress;
     unsigned char op = opcodes[ip++];
     run = true;
@@ -383,7 +565,10 @@ void DOSEmulator::RunCode()
 
     while (run)
     {
-        printf("%02x\n", op);
+
+        if (debug)
+            DebugMenu();
+
         switch (op)
         {
         case 0x0:
@@ -1130,7 +1315,7 @@ void DOSEmulator::RunCode()
         {
             op = opcodes[ip++];
             short val = (opcodes[ip++] & 0xFF) + ((opcodes[ip++] & 0xFF) << 8);
-            
+
             registers[GetRegister(op)][1] = val & 0xFF;
             registers[GetRegister(op)][0] = (val >> 8) & 0xFF;
             break;
@@ -1370,7 +1555,9 @@ void DOSEmulator::RunCode()
         }
         case 0xc6:
         {
-            printf("Not Yet Implemented: %2x\n", op);
+            op = opcodes[ip++];
+            char val = opcodes[ip++];
+            SetModMemVal8(val, op);
             break;
         }
         case 0xc7:
@@ -1603,28 +1790,28 @@ void DOSEmulator::RunCode()
         case 0xf2:
         {
             op = opcodes[ip++];
-            switch(op)
+            switch (op)
             {
-                case SCASB:
+            case SCASB:
+            {
+                unsigned char *start = GetDataStart(ES) + (registers[DI][0] << 8) + registers[DI][1];
+
+                flags[ZF] = false;
+
+                while (*start != '$')
+                {
+                    if (*start == registers[AX][AL])
                     {
-                        unsigned char * start = GetDataStart(ES) + (registers[DI][0] << 8) + registers[DI][1];
-                        
-                        flags[ZF] = false;
-                        
-                        while(*start != '$')
-                        {
-                            if (*start == registers[AX][AL])
-                            {
-                                flags[ZF] = true;
-                                break;
-                            }
-                            start++;
-                        }
+                        flags[ZF] = true;
                         break;
                     }
-                default:
-                    printf("0xf2 component not implemented");
-                    break;
+                    start++;
+                }
+                break;
+            }
+            default:
+                printf("0xf2 component not implemented");
+                break;
             }
             break;
         }
@@ -1697,9 +1884,14 @@ void DOSEmulator::RunCode()
             run = false;
             break;
         }
-        if (instr_count++ >= 2)
-            run = false;
-        PrintStack();
+        // if (instr_count++ >= 2)
+        //     run = false;
+
+        instr_executed++;
+
+        if (instr_executed == step)
+            debug = true;
+
         op = opcodes[ip++];
     }
 }

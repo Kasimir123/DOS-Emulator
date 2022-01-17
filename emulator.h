@@ -51,9 +51,10 @@
 class DOSEmulator
 {
 public:
-    DOSEmulator(unsigned char * program_data)
+    DOSEmulator(unsigned char * program_data, bool start_debug = false)
     {
         data = program_data;
+        debug = start_debug;
     }
 
     void StartEmulation();
@@ -66,7 +67,10 @@ private:
     bool flags[8];
     unsigned char * opcodes;
     int ip = 0;
+    int instr_executed = 0;
+    int step = 0;
     bool run = true;
+    bool debug;
 
     void RunCode();
     int CalculateStartAddress();
@@ -80,6 +84,7 @@ private:
     short GetModMemVal(char op);
     void SetModMemVal(short val, char op);
     short GetModMemVal8(char op);
+    void SetModMemVal8(char val, char op);
     void PerformInterrupt(char val);
     bool CheckIfCarry(char val1, char val2, char operation);
     bool CheckIfParity(char val1, char val2, char operation);
@@ -90,5 +95,6 @@ private:
     bool CheckIfDirection(char val1, char val2, char operation);
     bool CheckIfOverflow(char val1, char val2, char operation);
     void UpdateFlags(char val1, char val2, char operation);
+    void DebugMenu();
 };
 
