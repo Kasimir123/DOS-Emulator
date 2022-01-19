@@ -1,1 +1,1 @@
-g++ -Wall -g main.cpp emulator.cpp -o main
+g++ -Wall -g main.cpp emulator.cpp -o main -L/usr/X11R6/lib -lm -lpthread -lX11

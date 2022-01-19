@@ -24,11 +24,21 @@ void PrintHeader(DOS_HEADER *header)
     fprintf(stdout, "\tInitial (relative) CS value:     \t\t%.*hd\n", 3, header->cs);
     fprintf(stdout, "\tFile address of relocation table:\t\t%.*hd\n", 3, header->relocpos);
     fprintf(stdout, "\tOverlay number:                  \t\t%.*hd\n", 3, header->noverlay);
+
+    fprintf(stdout, "Relocations\n");
+    for (int i = 0; i < header->nreloc; i++)
+    {
+        RELOCATION *rel = (RELOCATION *)((char *)header + header->relocpos + (i * 4));
+        fprintf(stdout, "\tRelocation:\n");
+        fprintf(stdout, "\t\tOffset:        %04hd\n", rel->offset);
+        fprintf(stdout, "\t\tSegment Value: %04hd\n", rel->segment_value);
+    }
 }
 
 int DOSEmulator::CalculateStartAddress()
 {
-    return (16 * header->hdrsize);
+    RELOCATION *start_rel = (RELOCATION *)((char *)header + header->relocpos);
+    return (16 * header->hdrsize) + (start_rel->segment_value * 16);
 }
 
 void DOSEmulator::PrintStack()
@@ -85,6 +95,26 @@ void DOSEmulator::ClearFlags()
     {
         flags[i] = false;
     }
+}
+
+void DOSEmulator::SetRegistersFromHeader()
+{
+    ClearRegisters();
+
+    short ss = header->ss;
+    short sp = header->sp;
+    short cs = header->cs;
+
+    special_registers[SS][0] = (ss >> 8) & 0xFF;
+    special_registers[SS][1] = ss & 0xFF;
+
+    registers[SP][0] = (sp >> 8) & 0xFF;
+    registers[SP][1] = sp & 0xFF;
+
+    special_registers[CS][0] = (cs >> 8) & 0xFF;
+    special_registers[CS][1] = cs & 0xFF;
+
+    ip = header->ip;
 }
 
 short DOSEmulator::GetRegister(char op)
@@ -296,37 +326,66 @@ char getCh()
 
 void DOSEmulator::PerformInterrupt(char val)
 {
-    switch (registers[AX][AH])
+    switch (val)
     {
-    case WRITE_CHAR_STDOUT:
+        case 0x10:
+        {
+            switch (registers[AX][AH])
+            {
+                case 0x0:
+                {
+                    if (registers[AX][AL] == 0x13)
+                    {
+                        img = cimg_library::CImg<>(320*2, 200*2, 1, 3);
+                        main_window = cimg_library::CImgDisplay(img, "Video Mode", 0);
+                        main_window.display(img);
+                    }
+                    break;
+                }
+                default:
+                fprintf(stdout, "Not yet Implemented: %d\n", registers[AX][AH]);
+                    break;
+            }
+            break;
+        }
+    case 0x21:
     {
-        fprintf(stdout, "%c", registers[DX][DL]);
-        registers[AX][AL] = registers[DX][DL];
-        break;
-    }
-    case READ_CHAR_STDIN_NOECHO:
-    {
-        registers[AX][AL] = getCh();
-        break;
-    }
-    case WRITE_STR_STDOUT:
-    {
-        short dx_val = ((registers[DX][DH] << 8) & 0xFF) + (registers[DX][DL] & 0xFF);
-        while (GetDataStart()[dx_val] != '$')
-            fprintf(stdout, "%c", GetDataStart()[dx_val++]);
+        switch (registers[AX][AH])
+        {
+        case WRITE_CHAR_STDOUT:
+        {
+            fprintf(stdout, "%c", registers[DX][DL]);
+            registers[AX][AL] = registers[DX][DL];
+            break;
+        }
+        case READ_CHAR_STDIN_NOECHO:
+        {
+            registers[AX][AL] = getCh();
+            break;
+        }
+        case WRITE_STR_STDOUT:
+        {
+            short dx_val = ((registers[DX][DH] << 8) & 0xFF) + (registers[DX][DL] & 0xFF);
+            while (GetDataStart()[dx_val] != '$')
+                fprintf(stdout, "%c", GetDataStart()[dx_val++]);
 
-        registers[AX][AL] = 0x24;
-        break;
-    }
-    case EXIT_PROGRAM:
-    {
-        fprintf(stdout, "\nExit with code: %d\n", registers[AX][AL]);
-        run = false;
+            registers[AX][AL] = 0x24;
+            break;
+        }
+        case EXIT_PROGRAM:
+        {
+            fprintf(stdout, "\nExit with code: %d\n", registers[AX][AL]);
+            run = false;
+            break;
+        }
+        default:
+            fprintf(stdout, "Not yet Implemented: %d\n", registers[AX][AH]);
+            break;
+        }
         break;
     }
     default:
-        fprintf(stdout, "Not yet Implemented: %d\n", registers[AX][AH]);
-        break;
+        fprintf(stdout, "Interrupt type %02x not yet implemented\n", val);
     }
 }
 
@@ -518,11 +577,20 @@ void DOSEmulator::DebugMenu()
         }
         else if (!(strcmp(command, "p") & strcmp(command, "print")))
         {
-            fprintf(stdout, "Current opcode: %02x\n", opcodes[ip - 1]);
+            fprintf(stdout, "Current Address: %04x\nCurrent opcode: %02x\n", ip - 1, opcodes[ip - 1]);
         }
         else if (!strcmp(command, "pm"))
         {
-            int start = atoi(commands[1]);
+            int start;
+
+            if (commands[1][0] == '0' && commands[1][1] == 'x')
+            {
+                start = (int)strtol(commands[1], NULL, 16);
+            }
+            else
+            {
+                start = atoi(commands[1]);
+            }
             fprintf(stdout, "Memory from %04x:\n", start);
 
             for (int i = 0; i < 5; i++)
@@ -549,19 +617,66 @@ void DOSEmulator::DebugMenu()
     }
 }
 
+void DOSEmulator::Push(short val)
+{
+    short sp_offset = (registers[SP][0] << 8) + registers[SP][1];
+
+    data[--sp_offset + (header->hdrsize * 16)] = val & 0xFF;
+    data[--sp_offset + (header->hdrsize * 16)] = (val >> 8) & 0xFF;
+
+    registers[SP][0] = (sp_offset >> 8) & 0xFF;
+    registers[SP][1] = sp_offset & 0xFF;
+}
+
+void DOSEmulator::Push8(char val)
+{
+    short sp_offset = (registers[SP][0] << 8) + registers[SP][1];
+
+    data[--sp_offset + (header->hdrsize * 16)] = val;
+
+    registers[SP][0] = (sp_offset >> 8) & 0xFF;
+    registers[SP][1] = sp_offset & 0xFF;
+}
+
+short DOSEmulator::Pop()
+{
+    short sp_offset = (registers[SP][0] << 8) + registers[SP][1];
+
+    short val = ((data[sp_offset++ + (header->hdrsize * 16)] << 8) & 0xFF) +
+                data[sp_offset++ + (header->hdrsize * 16)];
+
+    registers[SP][0] = (sp_offset >> 8) & 0xFF;
+    registers[SP][1] = sp_offset & 0xFF;
+
+    return val;
+}
+
+char DOSEmulator::Pop8()
+{
+    short sp_offset = (registers[SP][0] << 8) + registers[SP][1];
+
+    char val = data[sp_offset++ + (header->hdrsize * 16)];
+
+    registers[SP][0] = (sp_offset >> 8) & 0xFF;
+    registers[SP][1] = sp_offset & 0xFF;
+
+    return val;
+}
+
 void DOSEmulator::RunCode()
 {
 
     int instr_count = 0;
 
-    ip = 0;
     instr_executed = 0;
     opcodes = data + startAddress;
-    unsigned char op = opcodes[ip++];
     run = true;
 
-    ClearRegisters();
     ClearFlags();
+
+    SetRegistersFromHeader();
+
+    unsigned char op = opcodes[ip++];
 
     while (run)
     {
@@ -723,7 +838,7 @@ void DOSEmulator::RunCode()
         }
         case 0x1e:
         {
-            printf("Not Yet Implemented: %2x\n", op);
+            Push((special_registers[DS][0] << 8) + special_registers[DS][1]);
             break;
         }
         case 0x1f:
@@ -788,7 +903,18 @@ void DOSEmulator::RunCode()
         }
         case 0x2b:
         {
-            printf("Not Yet Implemented: %2x\n", op);
+            op = opcodes[ip++];
+
+            short val1 = (registers[GetRegister(op)][0] << 8) + registers[GetRegister(op)][1];
+            short val2 = GetModMemVal(op);
+
+            UpdateFlags(val1, val2, SUBTRACTION);
+
+            short result = val1 - val2;
+
+            registers[GetRegister(op)][0] = (result >> 8) & 0xFF;
+            registers[GetRegister(op)][1] = result & 0xFF;
+
             break;
         }
         case 0x2c:
@@ -978,83 +1104,29 @@ void DOSEmulator::RunCode()
             break;
         }
         case 0x50:
-        {
-            printf("Not Yet Implemented: %2x\n", op);
-            break;
-        }
         case 0x51:
-        {
-            printf("Not Yet Implemented: %2x\n", op);
-            break;
-        }
         case 0x52:
-        {
-            printf("Not Yet Implemented: %2x\n", op);
-            break;
-        }
         case 0x53:
-        {
-            printf("Not Yet Implemented: %2x\n", op);
-            break;
-        }
         case 0x54:
-        {
-            printf("Not Yet Implemented: %2x\n", op);
-            break;
-        }
         case 0x55:
-        {
-            printf("Not Yet Implemented: %2x\n", op);
-            break;
-        }
         case 0x56:
-        {
-            printf("Not Yet Implemented: %2x\n", op);
-            break;
-        }
         case 0x57:
         {
-            printf("Not Yet Implemented: %2x\n", op);
+            Push((registers[op - 0x50][0] << 8) + registers[op - 0x50][1]);
             break;
         }
         case 0x58:
-        {
-            printf("Not Yet Implemented: %2x\n", op);
-            break;
-        }
         case 0x59:
-        {
-            printf("Not Yet Implemented: %2x\n", op);
-            break;
-        }
         case 0x5a:
-        {
-            printf("Not Yet Implemented: %2x\n", op);
-            break;
-        }
         case 0x5b:
-        {
-            printf("Not Yet Implemented: %2x\n", op);
-            break;
-        }
         case 0x5c:
-        {
-            printf("Not Yet Implemented: %2x\n", op);
-            break;
-        }
         case 0x5d:
-        {
-            printf("Not Yet Implemented: %2x\n", op);
-            break;
-        }
         case 0x5e:
-        {
-            printf("Not Yet Implemented: %2x\n", op);
-            break;
-        }
         case 0x5f:
         {
-            printf("Not Yet Implemented: %2x\n", op);
+            short val = Pop();
+            registers[op - 0x58][0] = (val >> 8) & 0xFF;
+            registers[op - 0x58][1] = val & 0xFF;
             break;
         }
         case 0x60:
@@ -1738,7 +1810,8 @@ void DOSEmulator::RunCode()
         }
         case 0xe8:
         {
-            printf("Not Yet Implemented: %2x\n", op);
+            short rel = opcodes[ip++] + (opcodes[ip++] << 8);
+            ip += rel;
             break;
         }
         case 0xe9:
@@ -1904,7 +1977,7 @@ void DOSEmulator::StartEmulation()
 
     startAddress = CalculateStartAddress();
 
-    fprintf(stdout, "Runtime: %d\n", startAddress);
+    fprintf(stdout, "Runtime: %04x\n", startAddress);
 
     RunCode();
 }

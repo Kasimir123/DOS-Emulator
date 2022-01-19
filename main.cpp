@@ -23,7 +23,7 @@ int main(int argc, char * argv[])
     fread(buffer, filelen, 1, fileptr); // Read in the entire file
     fclose(fileptr); // Close the file
 
-    DOSEmulator emulator(buffer);
+    DOSEmulator emulator(buffer, argc > 2 ? true : false);
 
     emulator.StartEmulation();
     

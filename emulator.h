@@ -1,4 +1,5 @@
 #include "./structs.h"
+#include "./CImg.h"
 
 #define AX 0
 #define CX 1
@@ -71,12 +72,15 @@ private:
     int step = 0;
     bool run = true;
     bool debug;
+    cimg_library::CImg<> img;
+    cimg_library::CImgDisplay main_window;
 
     void RunCode();
     int CalculateStartAddress();
     void PrintStack();
     void ClearRegisters();
     void ClearFlags();
+    void SetRegistersFromHeader();
     short GetRegister(char op);
     short GetModRegister(char op);
     char GetModValue(char op);
@@ -95,6 +99,14 @@ private:
     bool CheckIfDirection(char val1, char val2, char operation);
     bool CheckIfOverflow(char val1, char val2, char operation);
     void UpdateFlags(char val1, char val2, char operation);
+    void Push(short val);
+    void Push8(char val);
+    short Pop();
+    char Pop8();
     void DebugMenu();
 };
 
+    
+    
+
+    
