@@ -54,6 +54,40 @@ char *read_async()
     return read_data;
 }
 
+char get_char_async()
+{
+    ready = false;
+
+    emscripten_fetch_attr_t attr;
+    emscripten_fetch_attr_init(&attr);
+    strcpy(attr.requestMethod, "GET");
+    attr.attributes = EMSCRIPTEN_FETCH_LOAD_TO_MEMORY;
+    attr.onsuccess = read_success;
+    attr.onerror = read_fail;
+    emscripten_fetch(&attr, "___terminal::get_char");
+
+    while (!ready)
+    {
+        emscripten_sleep(100);
+    }
+
+    return read_data[0];
+}
+
+void write_async(char x)
+{
+    emscripten_fetch_attr_t attr;
+    emscripten_fetch_attr_init(&attr);
+    strcpy(attr.requestMethod, "POST");
+    attr.attributes = EMSCRIPTEN_FETCH_LOAD_TO_MEMORY;
+
+    std::string url("___terminal::write::");
+
+    url.append(1, x);
+
+    emscripten_fetch(&attr, url.c_str());
+}
+
 void PrintHeader(DOS_HEADER *header)
 {
 
@@ -348,14 +382,6 @@ void DOSEmulator::SetModMemVal8(char val, char op)
     }
 }
 
-char getCh()
-{
-
-    char ret = read_async()[0];
-
-    return ret;
-}
-
 void DOSEmulator::PerformInterrupt(char val)
 {
     switch (val)
@@ -383,20 +409,20 @@ void DOSEmulator::PerformInterrupt(char val)
         {
         case WRITE_CHAR_STDOUT:
         {
-            fprintf(stdout, "%c", registers[DX][DL]);
+            write_async(registers[DX][DL]);
             registers[AX][AL] = registers[DX][DL];
             break;
         }
         case READ_CHAR_STDIN_NOECHO:
         {
-            registers[AX][AL] = getCh();
+            registers[AX][AL] = get_char_async();
             break;
         }
         case WRITE_STR_STDOUT:
         {
             short dx_val = ((registers[DX][DH] << 8) & 0xFF) + (registers[DX][DL] & 0xFF);
             while (GetDataStart()[dx_val] != '$')
-                fprintf(stdout, "%c", GetDataStart()[dx_val++]);
+                write_async(GetDataStart()[dx_val++]);
 
             registers[AX][AL] = 0x24;
             break;

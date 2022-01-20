@@ -1,0 +1,11 @@
+body {
+    background-color: #212121;
+    color: #ffffff;
+}
+
+textarea {
+    background-color: #484848;
+    color: #ffffff;
+    font-family: monospace;
+    /* border-color: red; */
+}
