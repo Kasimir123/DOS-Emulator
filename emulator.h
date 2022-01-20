@@ -1,5 +1,4 @@
 #include "./structs.h"
-#include "./CImg.h"
 
 #define AX 0
 #define CX 1
@@ -72,8 +71,6 @@ private:
     int step = 0;
     bool run = true;
     bool debug;
-    cimg_library::CImg<> img;
-    cimg_library::CImgDisplay main_window;
 
     void RunCode();
     int CalculateStartAddress();

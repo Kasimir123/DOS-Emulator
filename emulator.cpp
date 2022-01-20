@@ -5,6 +5,70 @@
 #include <vector>
 #include <ostream>
 #include <iostream>
+#include <emscripten/fetch.h>
+#include <string.h>
+#include "unistd.h"
+
+
+char *read_data;
+bool ready;
+emscripten_fetch_t *fetchd;
+
+void read_success(emscripten_fetch_t *fetch)
+{
+    if (read_data)
+        free(read_data);
+
+    read_data = (char*)malloc(sizeof(char)*(strlen(fetch->data) + 2));
+
+    memcpy(read_data, fetch->data, strlen(fetch->data));
+
+    read_data[strlen(fetch->data)] = '\n';
+    read_data[strlen(fetch->data)+1] = '\0';
+
+    ready = true;
+    emscripten_fetch_close(fetch);
+}
+
+void read_fail(emscripten_fetch_t *fetch)
+{
+    emscripten_fetch_close(fetch);
+}
+
+// start_timer(): call JS to set an async timer for 500ms
+EM_JS(void, start_timer, (), {
+  Module.timer = false;
+  setTimeout(function() {
+    Module.timer = true;
+  }, 500);
+});
+
+// check_timer(): check if that timer occurred
+EM_JS(bool, check_timer, (), {
+  return Module.timer;
+});
+
+char *read_async()
+{
+
+    ready = false;
+
+    emscripten_fetch_attr_t attr;
+    emscripten_fetch_attr_init(&attr);
+    strcpy(attr.requestMethod, "GET");
+    attr.attributes = EMSCRIPTEN_FETCH_LOAD_TO_MEMORY;
+    attr.onsuccess = read_success;
+    attr.onerror = read_fail;
+    emscripten_fetch(&attr, "___terminal::read");
+
+    while (!ready)
+    {
+        emscripten_sleep(100);
+    }
+
+    return read_data;
+}
+
 
 void PrintHeader(DOS_HEADER *header)
 {
@@ -303,23 +367,7 @@ void DOSEmulator::SetModMemVal8(char val, char op)
 char getCh()
 {
 
-    struct termios old_kbd_mode; /* orig keyboard settings   */
-    struct termios new_kbd_mode;
-
-    tcgetattr(0, &old_kbd_mode);
-
-    memcpy(&new_kbd_mode, &old_kbd_mode, sizeof(struct termios));
-
-    new_kbd_mode.c_lflag &= ~(ICANON | ECHO); /* new kbd flags */
-    new_kbd_mode.c_cc[VTIME] = 0;
-    new_kbd_mode.c_cc[VMIN] = 1;
-
-    tcsetattr(0, TCSANOW, &new_kbd_mode);
-
-    char ret = fgetc(stdin);
-
-    /* reset original keyboard  */
-    tcsetattr(0, TCSANOW, &old_kbd_mode);
+    char ret = read_async()[0];
 
     return ret;
 }
@@ -336,9 +384,6 @@ void DOSEmulator::PerformInterrupt(char val)
                 {
                     if (registers[AX][AL] == 0x13)
                     {
-                        img = cimg_library::CImg<>(320*2, 200*2, 1, 3);
-                        main_window = cimg_library::CImgDisplay(img, "Video Mode", 0);
-                        main_window.display(img);
                     }
                     break;
                 }
@@ -548,12 +593,11 @@ void DOSEmulator::DebugMenu()
     fprintf(stdout, "Total Instructions executed: %d\n", instr_executed);
     fprintf(stdout, "> ");
 
-    char line[256];
-    fgets(line, sizeof(line), stdin);
+    char * data_from_stdin = read_async();
 
-    while (strcmp(line, "n") & strcmp(line, "next"))
+    while (strcmp(data_from_stdin, "n") & strcmp(data_from_stdin, "next"))
     {
-        std::vector<char *> commands = GetTokens(line);
+        std::vector<char *> commands = GetTokens(data_from_stdin);
 
         char *command = commands[0];
 
@@ -609,11 +653,11 @@ void DOSEmulator::DebugMenu()
         }
         else
         {
-            printf("Command %s not found, type h or help for list of commands\n", line);
+            printf("Command %s not found, type h or help for list of commands\n", data_from_stdin);
         }
 
         fprintf(stdout, "> ");
-        fgets(line, sizeof(line), stdin);
+        data_from_stdin = read_async();
     }
 }
 

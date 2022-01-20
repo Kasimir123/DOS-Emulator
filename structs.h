@@ -23,7 +23,9 @@ typedef struct DOS_HEADER
     long e_lfanew; // Offset to the 'PE\0\0' signature relative to the beginning of the file
 } DOS_HEADER;
 
-typedef struct RELOCATION {
+typedef struct RELOCATION
+{
     short offset;
     short segment_value;
 } RELOCATION;
+
