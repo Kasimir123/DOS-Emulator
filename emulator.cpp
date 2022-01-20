@@ -579,7 +579,6 @@ std::vector<char *> GetTokens(char *line)
 void DOSEmulator::DebugMenu()
 {
     fprintf(stdout, "Total Instructions executed: %d\n", instr_executed);
-    fprintf(stdout, "> ");
 
     char * data_from_stdin = read_async();
 
@@ -643,8 +642,6 @@ void DOSEmulator::DebugMenu()
         {
             printf("Command %s not found, type h or help for list of commands\n", data_from_stdin);
         }
-
-        fprintf(stdout, "> ");
 
         data_from_stdin = read_async();
     }
