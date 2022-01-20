@@ -9,22 +9,20 @@
 #include <string.h>
 #include "unistd.h"
 
-
 char *read_data;
 bool ready;
-emscripten_fetch_t *fetchd;
 
 void read_success(emscripten_fetch_t *fetch)
 {
     if (read_data)
         free(read_data);
 
-    read_data = (char*)malloc(sizeof(char)*(strlen(fetch->data) + 2));
+    read_data = (char *)malloc(sizeof(char) * (fetch->numBytes + 1));
 
-    memcpy(read_data, fetch->data, strlen(fetch->data));
+    memcpy(read_data, fetch->data, fetch->numBytes);
 
-    read_data[strlen(fetch->data)] = '\n';
-    read_data[strlen(fetch->data)+1] = '\0';
+    read_data[fetch->numBytes - 1] = '\n';
+    read_data[fetch->numBytes] = '\0';
 
     ready = true;
     emscripten_fetch_close(fetch);
@@ -34,7 +32,6 @@ void read_fail(emscripten_fetch_t *fetch)
 {
     emscripten_fetch_close(fetch);
 }
-
 
 char *read_async()
 {
@@ -56,7 +53,6 @@ char *read_async()
 
     return read_data;
 }
-
 
 void PrintHeader(DOS_HEADER *header)
 {
@@ -364,23 +360,23 @@ void DOSEmulator::PerformInterrupt(char val)
 {
     switch (val)
     {
-        case 0x10:
+    case 0x10:
+    {
+        switch (registers[AX][AH])
         {
-            switch (registers[AX][AH])
+        case 0x0:
+        {
+            if (registers[AX][AL] == 0x13)
             {
-                case 0x0:
-                {
-                    if (registers[AX][AL] == 0x13)
-                    {
-                    }
-                    break;
-                }
-                default:
-                fprintf(stdout, "Not yet Implemented: %d\n", registers[AX][AH]);
-                    break;
             }
             break;
         }
+        default:
+            fprintf(stdout, "Not yet Implemented: %d\n", registers[AX][AH]);
+            break;
+        }
+        break;
+    }
     case 0x21:
     {
         switch (registers[AX][AH])
@@ -580,7 +576,7 @@ void DOSEmulator::DebugMenu()
 {
     fprintf(stdout, "Total Instructions executed: %d\n", instr_executed);
 
-    char * data_from_stdin = read_async();
+    char *data_from_stdin = read_async();
 
     while (strcmp(data_from_stdin, "n") & strcmp(data_from_stdin, "next"))
     {
@@ -608,7 +604,7 @@ void DOSEmulator::DebugMenu()
         }
         else if (!(strcmp(command, "p") & strcmp(command, "print")))
         {
-            fprintf(stdout, "Current Address: %04x\nCurrent opcode: %02x\n", ip - 1, opcodes[ip - 1]);
+            fprintf(stdout, "Current Address: %04x\tCurrent opcode: %02x\n", ip - 1 + startAddress, opcodes[ip - 1]);
         }
         else if (!strcmp(command, "pm"))
         {
@@ -2002,6 +1998,12 @@ void DOSEmulator::RunCode()
 void DOSEmulator::StartEmulation()
 {
     header = (DOS_HEADER *)data;
+
+    if (header->signature[0] != 'M' || header->signature[1] != 'Z')
+    {
+        fprintf(stdout, "Not a DOS file\n");
+        exit(1);
+    }
 
     PrintHeader(header);
 

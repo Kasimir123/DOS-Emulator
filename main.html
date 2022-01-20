@@ -8,11 +8,29 @@
 
 <body>
 
-    <textarea id="output" rows="10" cols="66" style="width: 90vw; height: 90vh; padding-top: 0; margin-top: 0;" READONLY></textarea>
+    <textarea id="output" rows="10" cols="66" style="width: 50vw; height: 90vh; padding-top: 0; margin-top: 0;" READONLY></textarea>
 
     <textarea id="input" style="visibility: hidden; width: 0vw; height: 0vh;"></textarea>
+
+    <input type="file" id="file-selector" multiple>
 </body>
 <script>
+
+let y = null;
+    
+  const fileSelector = document.getElementById('file-selector');
+  fileSelector.addEventListener('change', (event) => {
+    const fileList = event.target.files;
+   var fileReader = new FileReader();
+    fileReader.onload = function (event) {
+        var arrayBuffer = event.target.result;
+        var bytes = new Uint8Array(arrayBuffer);
+        var resp = '';
+
+         y(bytes.toString());
+      }
+      fileReader.readAsArrayBuffer(fileList[0]);
+  });
 
     function emscripten_sleep(ms) {
         Asyncify.handleSleep(function (wakeUp) {
@@ -26,6 +44,12 @@
         x = success;
 
     };
+
+
+function open_file(success) {
+    y = success;
+
+};
 
 
 
@@ -92,6 +116,15 @@
                                     read(
                                         function (text) {
                                             props.responseText = text + '\0';
+                                            target.onload();
+                                        }
+                                    );
+                                }
+                                else if (payload[1] == 'open_file') {
+                                    $("#output").val($("#output").val() + "Please Upload a File\n");
+                                    open_file(
+                                        function (text) {
+                                            props.responseText = text;
                                             target.onload();
                                         }
                                     );
