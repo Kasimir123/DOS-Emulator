@@ -616,6 +616,9 @@ void DOSEmulator::DebugMenu()
             fprintf(stdout, "\tnext (n):   Step to next instruction\n");
             fprintf(stdout, "\tstatus (s): Prints status of registers and flags\n");
             fprintf(stdout, "\tstep (st) <#>: Runs for # amount of instructions\n");
+            fprintf(stdout, "\tprint (p): Prints current address and opcode\n");
+            fprintf(stdout, "\tpm <#>: Prints memory at region (begin with 0x to display hex)\n");
+            fprintf(stdout, "\tc: Continue program execution\n");
             fprintf(stdout, "\thelp (h):   Get a list of commands\n");
         }
         else if (!(strcmp(command, "s") & strcmp(command, "status")))
