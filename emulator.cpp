@@ -35,18 +35,6 @@ void read_fail(emscripten_fetch_t *fetch)
     emscripten_fetch_close(fetch);
 }
 
-// start_timer(): call JS to set an async timer for 500ms
-EM_JS(void, start_timer, (), {
-  Module.timer = false;
-  setTimeout(function() {
-    Module.timer = true;
-  }, 500);
-});
-
-// check_timer(): check if that timer occurred
-EM_JS(bool, check_timer, (), {
-  return Module.timer;
-});
 
 char *read_async()
 {
@@ -657,6 +645,7 @@ void DOSEmulator::DebugMenu()
         }
 
         fprintf(stdout, "> ");
+
         data_from_stdin = read_async();
     }
 }
