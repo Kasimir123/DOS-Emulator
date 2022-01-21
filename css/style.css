@@ -3,9 +3,14 @@ body {
     color: #ffffff;
 }
 
-textarea {
+textarea, canvas {
     background-color: #484848;
     color: #ffffff;
     font-family: monospace;
     /* border-color: red; */
+}
+
+
+canvas { 
+    border: 1px solid red; 
 }

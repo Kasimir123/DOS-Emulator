@@ -74,16 +74,34 @@ char get_char_async()
     return read_data[0];
 }
 
-void write_async(char x)
+void send_ping_and_char_async(char* command, char c)
 {
     emscripten_fetch_attr_t attr;
     emscripten_fetch_attr_init(&attr);
     strcpy(attr.requestMethod, "POST");
     attr.attributes = EMSCRIPTEN_FETCH_LOAD_TO_MEMORY;
 
-    std::string url("___terminal::write::");
+    std::string url("___terminal::");
 
-    url.append(1, x);
+    url.append(command);
+
+    url.append("::");
+
+    url.append(1, c);
+
+    emscripten_fetch(&attr, url.c_str());
+}
+
+void send_ping_async(char * command)
+{
+    emscripten_fetch_attr_t attr;
+    emscripten_fetch_attr_init(&attr);
+    strcpy(attr.requestMethod, "POST");
+    attr.attributes = EMSCRIPTEN_FETCH_LOAD_TO_MEMORY;
+
+    std::string url("___terminal::");
+
+    url.append(command);
 
     emscripten_fetch(&attr, url.c_str());
 }
@@ -260,7 +278,7 @@ short DOSEmulator::GetModMemVal8(char op)
     switch (GetModValue(op))
     {
     case 0x0:
-    {
+    { 
         switch (GetModRegister(op))
         {
         case 0x6:
@@ -394,11 +412,18 @@ void DOSEmulator::PerformInterrupt(char val)
         {
             if (registers[AX][AL] == 0x13)
             {
+                send_ping_async("activate_video_mode");
             }
             break;
         }
+        // This could potentially be slightly wrong
+        case 0xb:
+        {
+            send_ping_and_char_async("set_background_color", registers[BX][BL]);
+            break;
+        }
         default:
-            fprintf(stdout, "Not yet Implemented: %d\n", registers[AX][AH]);
+            fprintf(stdout, "Not yet Implemented: %02x\n", registers[AX][AH]);
             break;
         }
         break;
@@ -409,7 +434,7 @@ void DOSEmulator::PerformInterrupt(char val)
         {
         case WRITE_CHAR_STDOUT:
         {
-            write_async(registers[DX][DL]);
+            send_ping_and_char_async("write", registers[DX][DL]);
             registers[AX][AL] = registers[DX][DL];
             break;
         }
@@ -422,7 +447,7 @@ void DOSEmulator::PerformInterrupt(char val)
         {
             short dx_val = ((registers[DX][DH] << 8) & 0xFF) + (registers[DX][DL] & 0xFF);
             while (GetDataStart()[dx_val] != '$')
-                write_async(GetDataStart()[dx_val++]);
+                send_ping_and_char_async("write", GetDataStart()[dx_val++]);
 
             registers[AX][AL] = 0x24;
             break;
@@ -1667,7 +1692,7 @@ void DOSEmulator::RunCode()
         }
         case 0xc3:
         {
-            printf("Not Yet Implemented: %2x\n", op);
+            ip = call_stack[--csp];
             break;
         }
         case 0xc4:
@@ -1866,6 +1891,7 @@ void DOSEmulator::RunCode()
         case 0xe8:
         {
             short rel = opcodes[ip++] + (opcodes[ip++] << 8);
+            call_stack[csp++] = ip;
             ip += rel;
             break;
         }

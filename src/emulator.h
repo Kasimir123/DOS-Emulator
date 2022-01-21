@@ -64,6 +64,8 @@ private:
     DOS_HEADER *header;
     unsigned char registers[8][2];
     unsigned char special_registers[6][2];
+    int call_stack[256];
+    int csp = 0;
     bool flags[8];
     unsigned char * opcodes;
     int ip = 0;
