@@ -140,8 +140,17 @@ window.XMLHttpRequest = (function (xhr) {
                                 );
                             }
                             else if (payload[1] == 'write') {
-                                $("#program_output").val($("#program_output").val() + payload[2]);
-
+                                if (video_mode)
+                                {
+                                    context.font = "15px Comic Sans MS";
+                                    context.fillStyle = "red";
+                                    context.fillText(payload[2], Number(payload[3]) * 10, Number(payload[4]) * 10);
+                                }
+                                else
+                                {
+                                    $("#program_output").val($("#program_output").val() + payload[2]);
+                                }
+                                
                             }
                             else if (payload[1] == 'activate_video_mode') {
                                 video_mode = true;

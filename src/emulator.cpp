@@ -8,6 +8,7 @@
 #include <emscripten/fetch.h>
 #include <string.h>
 #include "unistd.h"
+#include <sys/time.h>
 
 char *read_data;
 bool ready;
@@ -74,7 +75,7 @@ char get_char_async()
     return read_data[0];
 }
 
-void send_ping_and_char_async(char* command, char c)
+void send_ping_and_char_async(char *command, char c)
 {
     emscripten_fetch_attr_t attr;
     emscripten_fetch_attr_init(&attr);
@@ -92,7 +93,7 @@ void send_ping_and_char_async(char* command, char c)
     emscripten_fetch(&attr, url.c_str());
 }
 
-void send_ping_async(char * command)
+void send_ping_async(char *command)
 {
     emscripten_fetch_attr_t attr;
     emscripten_fetch_attr_init(&attr);
@@ -236,7 +237,7 @@ unsigned char *DOSEmulator::GetDataStart(short reg = DS)
 {
     short ds_val = ((special_registers[reg][0] & 0xFF) << 8) + (special_registers[reg][1] & 0xFF);
 
-    return opcodes + (ds_val * 16);
+    return data + (header->hdrsize * 16) + (ds_val * 16);
 }
 
 short DOSEmulator::GetModMemVal(char op)
@@ -278,7 +279,7 @@ short DOSEmulator::GetModMemVal8(char op)
     switch (GetModValue(op))
     {
     case 0x0:
-    { 
+    {
         switch (GetModRegister(op))
         {
         case 0x6:
@@ -326,6 +327,70 @@ void DOSEmulator::SetModMemVal8(char val, char op)
 {
     switch (GetModValue(op))
     {
+    case 0x0:
+    {
+        switch (GetModRegister(op))
+        {
+        case 0x0:
+        {
+            short bx_val = ((registers[BX][BH] << 8) & 0xFF) + (registers[BX][BL] & 0xFF);
+            short si_val = ((registers[SI][0] << 8) & 0xFF) + (registers[SI][1] & 0xFF);
+            GetDataStart()[bx_val + si_val] = val;
+            break;
+        }
+        case 0x1:
+        {
+            short bx_val = ((registers[BX][BH] << 8) & 0xFF) + (registers[BX][BL] & 0xFF);
+            short di_val = ((registers[DI][0] << 8) & 0xFF) + (registers[DI][1] & 0xFF);
+            GetDataStart()[bx_val + di_val] = val;
+            break;
+        }
+        case 0x2:
+        {
+            short bp_val = ((registers[BP][0] << 8) & 0xFF) + (registers[BP][1] & 0xFF);
+            short si_val = ((registers[SI][0] << 8) & 0xFF) + (registers[SI][1] & 0xFF);
+            GetDataStart()[bp_val + si_val] = val;
+            break;
+        }
+        case 0x3:
+        {
+            short bp_val = ((registers[BP][0] << 8) & 0xFF) + (registers[BP][1] & 0xFF);
+            short di_val = ((registers[DI][0] << 8) & 0xFF) + (registers[DI][1] & 0xFF);
+            GetDataStart()[bp_val + di_val] = val;
+            break;
+        }
+        case 0x4:
+        {
+            short si_val = ((registers[SI][0] << 8) & 0xFF) + (registers[SI][1] & 0xFF);
+            GetDataStart()[si_val] = val;
+            break;
+        }
+        case 0x5:
+        {
+            short di_val = ((registers[DI][0] << 8) & 0xFF) + (registers[DI][1] & 0xFF);
+            GetDataStart()[di_val] = val;
+            break;
+        }
+        case 0x6:
+        {
+            short offset = (opcodes[ip++] & 0xFF) + ((opcodes[ip++] & 0xFF) << 8);
+            short bp_val = ((registers[BP][0] << 8) & 0xFF) + (registers[BP][1] & 0xFF);
+            GetDataStart()[offset] = val;
+            break;
+        }
+        case 0x7:
+        {
+            short bx_val = ((registers[BX][BH] << 8) & 0xFF) + (registers[BX][BL] & 0xFF);
+            GetDataStart()[bx_val] = val;
+            break;
+        }
+
+        default:
+            fprintf(stdout, "Not yet Implemented set mod men val 8: %d\n", GetModRegister(op));
+            break;
+        }
+        break;
+    }
     case 0x2:
     {
         short offset = (opcodes[ip++] & 0xFF) + ((opcodes[ip++] & 0xFF) << 8);
@@ -413,7 +478,16 @@ void DOSEmulator::PerformInterrupt(char val)
             if (registers[AX][AL] == 0x13)
             {
                 send_ping_async("activate_video_mode");
+                video_mode = true;
             }
+            break;
+        }
+        case 0x2:
+        {
+            vCursor->row = registers[DX][DH];
+            vCursor->column = registers[DX][DL];
+            vCursor->page_number = registers[BX][BH];
+
             break;
         }
         // This could potentially be slightly wrong
@@ -445,11 +519,41 @@ void DOSEmulator::PerformInterrupt(char val)
         }
         case WRITE_STR_STDOUT:
         {
-            short dx_val = ((registers[DX][DH] << 8) & 0xFF) + (registers[DX][DL] & 0xFF);
-            while (GetDataStart()[dx_val] != '$')
-                send_ping_and_char_async("write", GetDataStart()[dx_val++]);
+            if (video_mode)
+            {
+                std::string send("write::");
+                short dx_val = ((registers[DX][DH] << 8) & 0xFF) + (registers[DX][DL] & 0xFF);
+                while (GetDataStart()[dx_val] != '$')
+                    send.append(1, GetDataStart()[dx_val++]);
 
-            registers[AX][AL] = 0x24;
+                send.append("::");
+                send.append(std::to_string(vCursor->column));
+                send.append("::");
+                send.append(std::to_string(vCursor->row));
+
+                send_ping_async((char *)send.c_str());
+            }
+            else
+            {
+                short dx_val = ((registers[DX][DH] << 8) & 0xFF) + (registers[DX][DL] & 0xFF);
+                while (GetDataStart()[dx_val] != '$')
+                    send_ping_and_char_async("write", GetDataStart()[dx_val++]);
+
+                registers[AX][AL] = 0x24;
+            }
+            break;
+        }
+        case GET_SYSTEM_TIME:
+        {
+            struct timeval time_now;
+            gettimeofday(&time_now, NULL);
+            struct tm *time_str_tm = gmtime(&time_now.tv_sec);
+
+            registers[CX][CH] = (time_str_tm->tm_hour) & 0xFF;
+            registers[CX][CL] = (time_str_tm->tm_min) & 0xFF;
+            registers[DX][DH] = (time_str_tm->tm_sec) & 0xFF;
+            registers[DX][DL] = (time_now.tv_usec / 100) & 0xFF;
+
             break;
         }
         case EXIT_PROGRAM:
@@ -1072,7 +1176,9 @@ void DOSEmulator::RunCode()
         }
         case 0x3a:
         {
-            printf("Not Yet Implemented: %2x\n", op);
+            op = opcodes[ip++];
+
+            UpdateFlags(registers[GetRegister(op) % 4][GetRegister(op) <= 3], GetModMemVal8(op), SUBTRACTION);
             break;
         }
         case 0x3b:
@@ -1377,7 +1483,18 @@ void DOSEmulator::RunCode()
         }
         case 0x80:
         {
-            printf("Not Yet Implemented: %2x\n", op);
+            op = opcodes[ip++];
+            switch (GetRegister(op))
+            {
+            case CMP:
+            {
+                UpdateFlags(GetModMemVal8(op), opcodes[ip++], SUBTRACTION);
+                break;
+            }
+            default:
+                printf("Not Yet Implemented 0x80: %2x\n", op);
+                break;
+            }
             break;
         }
         case 0x81:
@@ -1432,7 +1549,8 @@ void DOSEmulator::RunCode()
         }
         case 0x88:
         {
-            printf("Not Yet Implemented: %2x\n", op);
+            op = opcodes[ip++];
+            SetModMemVal8(registers[GetRegister(op) % 4][GetRegister(op) <= 3], op);
             break;
         }
         case 0x89:
@@ -1574,7 +1692,12 @@ void DOSEmulator::RunCode()
         }
         case 0xa1:
         {
-            printf("Not Yet Implemented: %2x\n", op);
+            short offset = opcodes[ip++] + (opcodes[ip++] << 8);
+
+            printf("offset: %02x", offset);
+
+            registers[AX][AH] = GetDataStart()[offset + 1];
+            registers[AX][AL] = GetDataStart()[offset];
             break;
         }
         case 0xa2:

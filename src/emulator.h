@@ -37,6 +37,7 @@
 #define SHR 5
 
 #define AND 4
+#define CMP 7
 
 #define SCASB 0xae
 
@@ -46,7 +47,16 @@
 #define WRITE_CHAR_STDOUT 0x2
 #define READ_CHAR_STDIN_NOECHO 0x8
 #define WRITE_STR_STDOUT 0x9
+#define GET_SYSTEM_TIME 0x2C
 #define EXIT_PROGRAM 0x4C
+
+class Cursor 
+{
+    public:
+    char row;
+    char column;
+    char page_number;
+};
 
 class DOSEmulator
 {
@@ -55,6 +65,7 @@ public:
     {
         data = program_data;
         debug = start_debug;
+        vCursor = new Cursor;
     }
 
     void StartEmulation();
@@ -73,6 +84,8 @@ private:
     int step = 0;
     bool run = true;
     bool debug;
+    Cursor * vCursor;
+    bool video_mode = false;
 
     void RunCode();
     int CalculateStartAddress();
