@@ -97,10 +97,10 @@ private:
     short GetModRegister(char op);
     char GetModValue(char op);
     unsigned char * GetDataStart(short reg);
-    short GetModMemVal(char op);
-    void SetModMemVal(short val, char op);
-    short GetModMemVal8(char op);
-    void SetModMemVal8(char val, char op);
+    short GetModMemVal(char op, bool commit_changes);
+    void SetModMemVal(short val, char op, bool commit_changes);
+    char GetModMemVal8(char op, bool commit_changes);
+    void SetModMemVal8(char val, char op, bool commit_changes);
     void PerformInterrupt(char val);
     bool CheckIfCarry(char val1, char val2, char operation);
     bool CheckIfParity(char val1, char val2, char operation);
