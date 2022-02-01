@@ -161,9 +161,9 @@ window.XMLHttpRequest = (function (xhr) {
                             }
                             else if (payload[1] == 'write') {
                                 if (video_mode) {
-                                    context.font = "15px Comic Sans MS";
+                                    context.font = "20px Comic Sans MS";
                                     context.fillStyle = "red";
-                                    context.fillText(payload[2], Number(payload[3]) * 10, Number(payload[4]) * 10);
+                                    context.fillText(payload[2], Number(payload[3]) * 15, Number(payload[4]) * 10);
                                 }
                                 else {
                                     $("#program_output").val($("#program_output").val() + payload[2]);
@@ -187,10 +187,12 @@ window.XMLHttpRequest = (function (xhr) {
 
                             }
                             else if (payload[1] == 'draw_pixel') {
-                                let col = Number(payload[3]);
-                                let row = Number(payload[4]);
-                                console.log("draw pixel: " + payload[2] + " " + payload[3] + " " + payload[4]);
-                                drawPixel(imagedata, col, row, colors[Number(payload[2])]);
+                                let col = Number(payload[3]) * 2;
+                                let row = Number(payload[4]) * 2;
+
+                                for (let i = 0; i < 2; i++)
+                                    for (let j = 0; j < 2; j++)
+                                        drawPixel(imagedata, col + i, row + j, colors[Number(payload[2])]);
 
                                 context.putImageData(imagedata, 0, 0);
                             }

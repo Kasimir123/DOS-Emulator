@@ -1,4 +1,5 @@
 #include "./structs.h"
+#include <vector>
 
 #define AX 0
 #define CX 1
@@ -86,12 +87,13 @@ private:
     bool flags[8];
     unsigned char * opcodes;
     int ip = 0;
-    int instr_executed = 0;
+    long long instr_executed = 0;
     int step = 0;
     bool run = true;
     bool debug;
     Cursor * vCursor;
     bool video_mode = false;
+    std::vector<int> breakpoints;
 
     void RunCode();
     int CalculateStartAddress();
@@ -108,20 +110,30 @@ private:
     char GetModMemVal8(char op, bool commit_changes);
     void SetModMemVal8(char val, char op, bool commit_changes);
     void PerformInterrupt(char val);
-    bool CheckIfCarry(char val1, char val2, char operation);
-    bool CheckIfParity(char val1, char val2, char operation);
-    bool CheckIfAuxiliary(char val1, char val2, char operation);
-    bool CheckIfZero(char val1, char val2, char operation);
-    bool CheckIfSign(char val1, char val2, char operation);
-    bool CheckIfInterrupt(char val1, char val2, char operation);
-    bool CheckIfDirection(char val1, char val2, char operation);
-    bool CheckIfOverflow(char val1, char val2, char operation);
-    void UpdateFlags(char val1, char val2, char operation);
+    bool CheckIfCarry(unsigned short val1, unsigned short val2, char operation);
+    bool CheckIfParity(unsigned short val1, unsigned short val2, char operation);
+    bool CheckIfAuxiliary(unsigned short val1, unsigned short val2, char operation);
+    bool CheckIfZero(unsigned short val1, unsigned short val2, char operation);
+    bool CheckIfSign(unsigned short val1, unsigned short val2, char operation);
+    bool CheckIfInterrupt(unsigned short val1, unsigned short val2, char operation);
+    bool CheckIfDirection(unsigned short val1, unsigned short val2, char operation);
+    bool CheckIfOverflow(unsigned short val1, unsigned short val2, char operation);
+    void UpdateFlags(unsigned short val1, unsigned short val2, char operation);
+    bool CheckIfCarry8(unsigned char val1, unsigned char val2, char operation);
+    bool CheckIfParity8(unsigned char val1, unsigned char val2, char operation);
+    bool CheckIfAuxiliary8(unsigned char val1, unsigned char val2, char operation);
+    bool CheckIfZero8(unsigned char val1, unsigned char val2, char operation);
+    bool CheckIfSign8(unsigned char val1, unsigned char val2, char operation);
+    bool CheckIfInterrupt8(unsigned char val1, unsigned char val2, char operation);
+    bool CheckIfDirection8(unsigned char val1, unsigned char val2, char operation);
+    bool CheckIfOverflow8(unsigned char val1, unsigned char val2, char operation);
+    void UpdateFlags8(unsigned char val1, unsigned char val2, char operation);
     void Push(short val);
     void Push8(char val);
     short Pop();
     char Pop8();
     void DebugMenu();
+    bool CheckIfBreakpoint(char op);
 };
 
     
