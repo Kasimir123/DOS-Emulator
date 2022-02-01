@@ -55,7 +55,7 @@ char *read_async()
     return read_data;
 }
 
-char get_char_async()
+char get_char_async(bool wait = false)
 {
     ready = false;
 
@@ -65,7 +65,14 @@ char get_char_async()
     attr.attributes = EMSCRIPTEN_FETCH_LOAD_TO_MEMORY;
     attr.onsuccess = read_success;
     attr.onerror = read_fail;
-    emscripten_fetch(&attr, "___terminal::get_char");
+    if (wait)
+    {
+        emscripten_fetch(&attr, "___terminal::get_char_now");
+    }
+    else
+    {
+        emscripten_fetch(&attr, "___terminal::get_char");
+    }
 
     while (!ready)
     {
@@ -255,52 +262,52 @@ short DOSEmulator::GetModMemVal(char op, bool commit_changes)
         {
             short bx_val = ((registers[BX][BH] << 8) & 0xFF) + (registers[BX][BL] & 0xFF);
             short si_val = ((registers[SI][0] << 8) & 0xFF) + (registers[SI][1] & 0xFF);
-            val = (GetDataStart()[bx_val + si_val] << 8) + GetDataStart()[bx_val + si_val];
+            val = (GetDataStart()[bx_val + si_val + 1] << 8) + GetDataStart()[bx_val + si_val];
             break;
         }
         case 0x1:
         {
             short bx_val = ((registers[BX][BH] << 8) & 0xFF) + (registers[BX][BL] & 0xFF);
             short di_val = ((registers[DI][0] << 8) & 0xFF) + (registers[DI][1] & 0xFF);
-            val = (GetDataStart()[bx_val + di_val] << 8) + GetDataStart()[bx_val + di_val];
+            val = (GetDataStart()[bx_val + di_val + 1] << 8) + GetDataStart()[bx_val + di_val];
             break;
         }
         case 0x2:
         {
             short bp_val = ((registers[BP][0] << 8) & 0xFF) + (registers[BP][1] & 0xFF);
             short si_val = ((registers[SI][0] << 8) & 0xFF) + (registers[SI][1] & 0xFF);
-            val = (GetDataStart()[bp_val + si_val] << 8) + GetDataStart()[bp_val + si_val];
+            val = (GetDataStart()[bp_val + si_val + 1] << 8) + GetDataStart()[bp_val + si_val];
             break;
         }
         case 0x3:
         {
             short bp_val = ((registers[BP][0] << 8) & 0xFF) + (registers[BP][1] & 0xFF);
             short di_val = ((registers[DI][0] << 8) & 0xFF) + (registers[DI][1] & 0xFF);
-            val = (GetDataStart()[bp_val + di_val] << 8) + GetDataStart()[bp_val + di_val];
+            val = (GetDataStart()[bp_val + di_val + 1] << 8) + GetDataStart()[bp_val + di_val];
             break;
         }
         case 0x4:
         {
             short si_val = ((registers[SI][0] << 8) & 0xFF) + (registers[SI][1] & 0xFF);
-            val = (GetDataStart()[si_val] << 8) + GetDataStart()[si_val];
+            val = (GetDataStart()[si_val + 1] << 8) + GetDataStart()[si_val];
             break;
         }
         case 0x5:
         {
             short di_val = ((registers[DI][0] << 8) & 0xFF) + (registers[DI][1] & 0xFF);
-            val = (GetDataStart()[di_val] << 8) + GetDataStart()[di_val];
+            val = (GetDataStart()[di_val + 1] << 8) + GetDataStart()[di_val];
             break;
         }
         case 0x6:
         {
             short offset = (opcodes[ip++] & 0xFF) + ((opcodes[ip++] & 0xFF) << 8);
-            val = (GetDataStart()[offset] << 8) + GetDataStart()[offset];
+            val = (GetDataStart()[offset + 1] << 8) + GetDataStart()[offset];
             break;
         }
         case 0x7:
         {
             short bx_val = ((registers[BX][BH] << 8) & 0xFF) + (registers[BX][BL] & 0xFF);
-            val = (GetDataStart()[bx_val] << 8) + GetDataStart()[bx_val];
+            val = (GetDataStart()[bx_val + 1] << 8) + GetDataStart()[bx_val];
             break;
         }
 
@@ -319,52 +326,52 @@ short DOSEmulator::GetModMemVal(char op, bool commit_changes)
         {
             short bx_val = ((registers[BX][BH] << 8) & 0xFF) + (registers[BX][BL] & 0xFF);
             short si_val = ((registers[SI][0] << 8) & 0xFF) + (registers[SI][1] & 0xFF);
-            val = (GetDataStart()[offset + bx_val + si_val] << 8) + GetDataStart()[offset + bx_val + si_val];
+            val = (GetDataStart()[offset + bx_val + si_val + 1] << 8) + GetDataStart()[offset + bx_val + si_val];
             break;
         }
         case 0x1:
         {
             short bx_val = ((registers[BX][BH] << 8) & 0xFF) + (registers[BX][BL] & 0xFF);
             short di_val = ((registers[DI][0] << 8) & 0xFF) + (registers[DI][1] & 0xFF);
-            val = (GetDataStart()[offset + bx_val + di_val] << 8) + GetDataStart()[offset + bx_val + di_val];
+            val = (GetDataStart()[offset + bx_val + di_val + 1] << 8) + GetDataStart()[offset + bx_val + di_val];
             break;
         }
         case 0x2:
         {
             short bp_val = ((registers[BP][0] << 8) & 0xFF) + (registers[BP][1] & 0xFF);
             short si_val = ((registers[SI][0] << 8) & 0xFF) + (registers[SI][1] & 0xFF);
-            val = (GetDataStart()[offset + bp_val + si_val] << 8) + GetDataStart()[offset + bp_val + si_val];
+            val = (GetDataStart()[offset + bp_val + si_val + 1] << 8) + GetDataStart()[offset + bp_val + si_val];
             break;
         }
         case 0x3:
         {
             short bp_val = ((registers[BP][0] << 8) & 0xFF) + (registers[BP][1] & 0xFF);
             short di_val = ((registers[DI][0] << 8) & 0xFF) + (registers[DI][1] & 0xFF);
-            val = (GetDataStart()[offset + bp_val + di_val] << 8) + GetDataStart()[offset + bp_val + di_val];
+            val = (GetDataStart()[offset + bp_val + di_val + 1] << 8) + GetDataStart()[offset + bp_val + di_val];
             break;
         }
         case 0x4:
         {
             short si_val = ((registers[SI][0] << 8) & 0xFF) + (registers[SI][1] & 0xFF);
-            val = (GetDataStart()[offset + si_val] << 8) + GetDataStart()[offset + si_val];
+            val = (GetDataStart()[offset + si_val + 1] << 8) + GetDataStart()[offset + si_val];
             break;
         }
         case 0x5:
         {
             short di_val = ((registers[DI][0] << 8) & 0xFF) + (registers[DI][1] & 0xFF);
-            val = (GetDataStart()[offset + di_val] << 8) + GetDataStart()[offset + di_val];
+            val = (GetDataStart()[offset + di_val + 1] << 8) + GetDataStart()[offset + di_val];
             break;
         }
         case 0x6:
         {
             short bp_val = ((registers[BP][0] << 8) & 0xFF) + (registers[BP][1] & 0xFF);
-            val = (GetDataStart()[offset + bp_val] << 8) + GetDataStart()[offset + bp_val];
+            val = (GetDataStart()[offset + bp_val + 1] << 8) + GetDataStart()[offset + bp_val];
             break;
         }
         case 0x7:
         {
             short bx_val = ((registers[BX][BH] << 8) & 0xFF) + (registers[BX][BL] & 0xFF);
-            val = (GetDataStart()[offset + bx_val] << 8) + GetDataStart()[offset + bx_val];
+            val = (GetDataStart()[offset + bx_val + 1] << 8) + GetDataStart()[offset + bx_val];
             break;
         }
         default:
@@ -382,52 +389,52 @@ short DOSEmulator::GetModMemVal(char op, bool commit_changes)
         {
             short bx_val = ((registers[BX][BH] << 8) & 0xFF) + (registers[BX][BL] & 0xFF);
             short si_val = ((registers[SI][0] << 8) & 0xFF) + (registers[SI][1] & 0xFF);
-            val = (GetDataStart()[offset + bx_val + si_val] << 8) + GetDataStart()[offset + bx_val + si_val];
+            val = (GetDataStart()[offset + bx_val + si_val + 1] << 8) + GetDataStart()[offset + bx_val + si_val];
             break;
         }
         case 0x1:
         {
             short bx_val = ((registers[BX][BH] << 8) & 0xFF) + (registers[BX][BL] & 0xFF);
             short di_val = ((registers[DI][0] << 8) & 0xFF) + (registers[DI][1] & 0xFF);
-            val = (GetDataStart()[offset + bx_val + di_val] << 8) + GetDataStart()[offset + bx_val + di_val];
+            val = (GetDataStart()[offset + bx_val + di_val + 1] << 8) + GetDataStart()[offset + bx_val + di_val];
             break;
         }
         case 0x2:
         {
             short bp_val = ((registers[BP][0] << 8) & 0xFF) + (registers[BP][1] & 0xFF);
             short si_val = ((registers[SI][0] << 8) & 0xFF) + (registers[SI][1] & 0xFF);
-            val = (GetDataStart()[offset + bp_val + si_val] << 8) + GetDataStart()[offset + bp_val + si_val];
+            val = (GetDataStart()[offset + bp_val + si_val + 1] << 8) + GetDataStart()[offset + bp_val + si_val];
             break;
         }
         case 0x3:
         {
             short bp_val = ((registers[BP][0] << 8) & 0xFF) + (registers[BP][1] & 0xFF);
             short di_val = ((registers[DI][0] << 8) & 0xFF) + (registers[DI][1] & 0xFF);
-            val = (GetDataStart()[offset + bp_val + di_val] << 8) + GetDataStart()[offset + bp_val + di_val];
+            val = (GetDataStart()[offset + bp_val + di_val + 1] << 8) + GetDataStart()[offset + bp_val + di_val];
             break;
         }
         case 0x4:
         {
             short si_val = ((registers[SI][0] << 8) & 0xFF) + (registers[SI][1] & 0xFF);
-            val = (GetDataStart()[offset + si_val] << 8) + GetDataStart()[offset + si_val];
+            val = (GetDataStart()[offset + si_val + 1] << 8) + GetDataStart()[offset + si_val];
             break;
         }
         case 0x5:
         {
             short di_val = ((registers[DI][0] << 8) & 0xFF) + (registers[DI][1] & 0xFF);
-            val = (GetDataStart()[offset + di_val] << 8) + GetDataStart()[offset + di_val];
+            val = (GetDataStart()[offset + di_val + 1] << 8) + GetDataStart()[offset + di_val];
             break;
         }
         case 0x6:
         {
             short bp_val = ((registers[BP][0] << 8) & 0xFF) + (registers[BP][1] & 0xFF);
-            val = (GetDataStart()[offset + bp_val] << 8) + GetDataStart()[offset + bp_val];
+            val = (GetDataStart()[offset + bp_val + 1] << 8) + GetDataStart()[offset + bp_val];
             break;
         }
         case 0x7:
         {
             short bx_val = ((registers[BX][BH] << 8) & 0xFF) + (registers[BX][BL] & 0xFF);
-            val = (GetDataStart()[offset + bx_val] << 8) + GetDataStart()[offset + bx_val + 1];
+            val = (GetDataStart()[offset + bx_val + 1] << 8) + GetDataStart()[offset + bx_val];
             break;
         }
         default:
@@ -467,8 +474,8 @@ void DOSEmulator::SetModMemVal(short val, char op, bool commit_changes)
             short si_val = ((registers[SI][0] << 8) & 0xFF) + (registers[SI][1] & 0xFF);
             if (val == NULL)
                 val = (opcodes[ip++] << 8) + opcodes[ip++];
-            GetDataStart()[bx_val + si_val] = (val >> 8) & 0xFF;
-            GetDataStart()[bx_val + si_val + 1] = val & 0xFF;
+            GetDataStart()[bx_val + si_val + 1] = (val >> 8) & 0xFF;
+            GetDataStart()[bx_val + si_val] = val & 0xFF;
             break;
         }
         case 0x1:
@@ -477,8 +484,8 @@ void DOSEmulator::SetModMemVal(short val, char op, bool commit_changes)
             short di_val = ((registers[DI][0] << 8) & 0xFF) + (registers[DI][1] & 0xFF);
             if (val == NULL)
                 val = (opcodes[ip++] << 8) + opcodes[ip++];
-            GetDataStart()[bx_val + di_val] = (val >> 8) & 0xFF;
-            GetDataStart()[bx_val + di_val + 1] = val & 0xFF;
+            GetDataStart()[bx_val + di_val + 1] = (val >> 8) & 0xFF;
+            GetDataStart()[bx_val + di_val] = val & 0xFF;
             break;
         }
         case 0x2:
@@ -487,8 +494,8 @@ void DOSEmulator::SetModMemVal(short val, char op, bool commit_changes)
             short si_val = ((registers[SI][0] << 8) & 0xFF) + (registers[SI][1] & 0xFF);
             if (val == NULL)
                 val = (opcodes[ip++] << 8) + opcodes[ip++];
-            GetDataStart()[bp_val + si_val] = (val >> 8) & 0xFF;
-            GetDataStart()[bp_val + si_val + 1] = val & 0xFF;
+            GetDataStart()[bp_val + si_val + 1] = (val >> 8) & 0xFF;
+            GetDataStart()[bp_val + si_val] = val & 0xFF;
             break;
         }
         case 0x3:
@@ -497,8 +504,8 @@ void DOSEmulator::SetModMemVal(short val, char op, bool commit_changes)
             short di_val = ((registers[DI][0] << 8) & 0xFF) + (registers[DI][1] & 0xFF);
             if (val == NULL)
                 val = (opcodes[ip++] << 8) + opcodes[ip++];
-            GetDataStart()[bp_val + di_val] = (val >> 8) & 0xFF;
-            GetDataStart()[bp_val + di_val + 1] = val & 0xFF;
+            GetDataStart()[bp_val + di_val + 1] = (val >> 8) & 0xFF;
+            GetDataStart()[bp_val + di_val] = val & 0xFF;
             break;
         }
         case 0x4:
@@ -506,8 +513,8 @@ void DOSEmulator::SetModMemVal(short val, char op, bool commit_changes)
             short si_val = ((registers[SI][0] << 8) & 0xFF) + (registers[SI][1] & 0xFF);
             if (val == NULL)
                 val = (opcodes[ip++] << 8) + opcodes[ip++];
-            GetDataStart()[si_val] = (val >> 8) & 0xFF;
-            GetDataStart()[si_val + 1] = val & 0xFF;
+            GetDataStart()[si_val + 1] = (val >> 8) & 0xFF;
+            GetDataStart()[si_val] = val & 0xFF;
             break;
         }
         case 0x5:
@@ -515,8 +522,8 @@ void DOSEmulator::SetModMemVal(short val, char op, bool commit_changes)
             short di_val = ((registers[DI][0] << 8) & 0xFF) + (registers[DI][1] & 0xFF);
             if (val == NULL)
                 val = (opcodes[ip++] << 8) + opcodes[ip++];
-            GetDataStart()[di_val] = (val >> 8) & 0xFF;
-            GetDataStart()[di_val + 1] = val & 0xFF;
+            GetDataStart()[di_val + 1] = (val >> 8) & 0xFF;
+            GetDataStart()[di_val] = val & 0xFF;
             break;
         }
         case 0x6:
@@ -524,8 +531,8 @@ void DOSEmulator::SetModMemVal(short val, char op, bool commit_changes)
             short offset = (opcodes[ip++] & 0xFF) + ((opcodes[ip++] & 0xFF) << 8);
             if (val == NULL)
                 val = (opcodes[ip++] << 8) + opcodes[ip++];
-            GetDataStart()[offset] = (val >> 8) & 0xFF;
-            GetDataStart()[offset + 1] = val & 0xFF;
+            GetDataStart()[offset + 1] = (val >> 8) & 0xFF;
+            GetDataStart()[offset] = val & 0xFF;
             break;
         }
         case 0x7:
@@ -533,8 +540,8 @@ void DOSEmulator::SetModMemVal(short val, char op, bool commit_changes)
             short bx_val = ((registers[BX][BH] << 8) & 0xFF) + (registers[BX][BL] & 0xFF);
             if (val == NULL)
                 val = (opcodes[ip++] << 8) + opcodes[ip++];
-            GetDataStart()[bx_val] = (val >> 8) & 0xFF;
-            GetDataStart()[bx_val + 1] = val & 0xFF;
+            GetDataStart()[bx_val + 1] = (val >> 8) & 0xFF;
+            GetDataStart()[bx_val] = val & 0xFF;
             break;
         }
 
@@ -555,8 +562,8 @@ void DOSEmulator::SetModMemVal(short val, char op, bool commit_changes)
             short si_val = ((registers[SI][0] << 8) & 0xFF) + (registers[SI][1] & 0xFF);
             if (val == NULL)
                 val = (opcodes[ip++] << 8) + opcodes[ip++];
-            GetDataStart()[offset + bx_val + si_val] = (val >> 8) & 0xFF;
-            GetDataStart()[offset + bx_val + si_val + 1] = val & 0xFF;
+            GetDataStart()[offset + bx_val + si_val + 1] = (val >> 8) & 0xFF;
+            GetDataStart()[offset + bx_val + si_val] = val & 0xFF;
             break;
         }
         case 0x1:
@@ -565,8 +572,8 @@ void DOSEmulator::SetModMemVal(short val, char op, bool commit_changes)
             short di_val = ((registers[DI][0] << 8) & 0xFF) + (registers[DI][1] & 0xFF);
             if (val == NULL)
                 val = (opcodes[ip++] << 8) + opcodes[ip++];
-            GetDataStart()[offset + bx_val + di_val] = (val >> 8) & 0xFF;
-            GetDataStart()[offset + bx_val + di_val + 1] = val & 0xFF;
+            GetDataStart()[offset + bx_val + di_val + 1] = (val >> 8) & 0xFF;
+            GetDataStart()[offset + bx_val + di_val] = val & 0xFF;
             break;
         }
         case 0x2:
@@ -575,8 +582,8 @@ void DOSEmulator::SetModMemVal(short val, char op, bool commit_changes)
             short si_val = ((registers[SI][0] << 8) & 0xFF) + (registers[SI][1] & 0xFF);
             if (val == NULL)
                 val = (opcodes[ip++] << 8) + opcodes[ip++];
-            GetDataStart()[offset + bp_val + si_val] = (val >> 8) & 0xFF;
-            GetDataStart()[offset + bp_val + si_val + 1] = val & 0xFF;
+            GetDataStart()[offset + bp_val + si_val + 1] = (val >> 8) & 0xFF;
+            GetDataStart()[offset + bp_val + si_val] = val & 0xFF;
             break;
         }
         case 0x3:
@@ -585,8 +592,8 @@ void DOSEmulator::SetModMemVal(short val, char op, bool commit_changes)
             short di_val = ((registers[DI][0] << 8) & 0xFF) + (registers[DI][1] & 0xFF);
             if (val == NULL)
                 val = (opcodes[ip++] << 8) + opcodes[ip++];
-            GetDataStart()[offset + bp_val + di_val] = (val >> 8) & 0xFF;
-            GetDataStart()[offset + bp_val + di_val + 1] = val & 0xFF;
+            GetDataStart()[offset + bp_val + di_val + 1] = (val >> 8) & 0xFF;
+            GetDataStart()[offset + bp_val + di_val] = val & 0xFF;
             break;
         }
         case 0x4:
@@ -594,8 +601,8 @@ void DOSEmulator::SetModMemVal(short val, char op, bool commit_changes)
             short si_val = ((registers[SI][0] << 8) & 0xFF) + (registers[SI][1] & 0xFF);
             if (val == NULL)
                 val = (opcodes[ip++] << 8) + opcodes[ip++];
-            GetDataStart()[offset + si_val] = (val >> 8) & 0xFF;
-            GetDataStart()[offset + si_val + 1] = val & 0xFF;
+            GetDataStart()[offset + si_val + 1] = (val >> 8) & 0xFF;
+            GetDataStart()[offset + si_val] = val & 0xFF;
             break;
         }
         case 0x5:
@@ -603,8 +610,8 @@ void DOSEmulator::SetModMemVal(short val, char op, bool commit_changes)
             short di_val = ((registers[DI][0] << 8) & 0xFF) + (registers[DI][1] & 0xFF);
             if (val == NULL)
                 val = (opcodes[ip++] << 8) + opcodes[ip++];
-            GetDataStart()[offset + di_val] = (val >> 8) & 0xFF;
-            GetDataStart()[offset + di_val + 1] = val & 0xFF;
+            GetDataStart()[offset + di_val + 1] = (val >> 8) & 0xFF;
+            GetDataStart()[offset + di_val] = val & 0xFF;
             break;
         }
         case 0x6:
@@ -612,8 +619,8 @@ void DOSEmulator::SetModMemVal(short val, char op, bool commit_changes)
             short bp_val = ((registers[BP][0] << 8) & 0xFF) + (registers[BP][1] & 0xFF);
             if (val == NULL)
                 val = (opcodes[ip++] << 8) + opcodes[ip++];
-            GetDataStart()[offset + bp_val] = (val >> 8) & 0xFF;
-            GetDataStart()[offset + bp_val + 1] = val & 0xFF;
+            GetDataStart()[offset + bp_val + 1] = (val >> 8) & 0xFF;
+            GetDataStart()[offset + bp_val] = val & 0xFF;
             break;
         }
         case 0x7:
@@ -621,8 +628,8 @@ void DOSEmulator::SetModMemVal(short val, char op, bool commit_changes)
             short bx_val = ((registers[BX][BH] << 8) & 0xFF) + (registers[BX][BL] & 0xFF);
             if (val == NULL)
                 val = (opcodes[ip++] << 8) + opcodes[ip++];
-            GetDataStart()[offset + bx_val] = (val >> 8) & 0xFF;
-            GetDataStart()[offset + bx_val + 1] = val & 0xFF;
+            GetDataStart()[offset + bx_val + 1] = (val >> 8) & 0xFF;
+            GetDataStart()[offset + bx_val] = val & 0xFF;
             break;
         }
         default:
@@ -642,8 +649,8 @@ void DOSEmulator::SetModMemVal(short val, char op, bool commit_changes)
             short si_val = ((registers[SI][0] << 8) & 0xFF) + (registers[SI][1] & 0xFF);
             if (val == NULL)
                 val = (opcodes[ip++] << 8) + opcodes[ip++];
-            GetDataStart()[offset + bx_val + si_val] = (val >> 8) & 0xFF;
-            GetDataStart()[offset + bx_val + si_val + 1] = val & 0xFF;
+            GetDataStart()[offset + bx_val + si_val + 1] = (val >> 8) & 0xFF;
+            GetDataStart()[offset + bx_val + si_val] = val & 0xFF;
             break;
         }
         case 0x1:
@@ -652,8 +659,8 @@ void DOSEmulator::SetModMemVal(short val, char op, bool commit_changes)
             short di_val = ((registers[DI][0] << 8) & 0xFF) + (registers[DI][1] & 0xFF);
             if (val == NULL)
                 val = (opcodes[ip++] << 8) + opcodes[ip++];
-            GetDataStart()[offset + bx_val + di_val] = (val >> 8) & 0xFF;
-            GetDataStart()[offset + bx_val + di_val + 1] = val & 0xFF;
+            GetDataStart()[offset + bx_val + di_val + 1] = (val >> 8) & 0xFF;
+            GetDataStart()[offset + bx_val + di_val] = val & 0xFF;
             break;
         }
         case 0x2:
@@ -662,8 +669,8 @@ void DOSEmulator::SetModMemVal(short val, char op, bool commit_changes)
             short si_val = ((registers[SI][0] << 8) & 0xFF) + (registers[SI][1] & 0xFF);
             if (val == NULL)
                 val = (opcodes[ip++] << 8) + opcodes[ip++];
-            GetDataStart()[offset + bp_val + si_val] = (val >> 8) & 0xFF;
-            GetDataStart()[offset + bp_val + si_val + 1] = val & 0xFF;
+            GetDataStart()[offset + bp_val + si_val + 1] = (val >> 8) & 0xFF;
+            GetDataStart()[offset + bp_val + si_val] = val & 0xFF;
             break;
         }
         case 0x3:
@@ -672,8 +679,8 @@ void DOSEmulator::SetModMemVal(short val, char op, bool commit_changes)
             short di_val = ((registers[DI][0] << 8) & 0xFF) + (registers[DI][1] & 0xFF);
             if (val == NULL)
                 val = (opcodes[ip++] << 8) + opcodes[ip++];
-            GetDataStart()[offset + bp_val + di_val] = (val >> 8) & 0xFF;
-            GetDataStart()[offset + bp_val + di_val + 1] = val & 0xFF;
+            GetDataStart()[offset + bp_val + di_val + 1] = (val >> 8) & 0xFF;
+            GetDataStart()[offset + bp_val + di_val] = val & 0xFF;
             break;
         }
         case 0x4:
@@ -681,8 +688,8 @@ void DOSEmulator::SetModMemVal(short val, char op, bool commit_changes)
             short si_val = ((registers[SI][0] << 8) & 0xFF) + (registers[SI][1] & 0xFF);
             if (val == NULL)
                 val = (opcodes[ip++] << 8) + opcodes[ip++];
-            GetDataStart()[offset + si_val] = (val >> 8) & 0xFF;
-            GetDataStart()[offset + si_val + 1] = val & 0xFF;
+            GetDataStart()[offset + si_val + 1] = (val >> 8) & 0xFF;
+            GetDataStart()[offset + si_val] = val & 0xFF;
             break;
         }
         case 0x5:
@@ -690,8 +697,8 @@ void DOSEmulator::SetModMemVal(short val, char op, bool commit_changes)
             short di_val = ((registers[DI][0] << 8) & 0xFF) + (registers[DI][1] & 0xFF);
             if (val == NULL)
                 val = (opcodes[ip++] << 8) + opcodes[ip++];
-            GetDataStart()[offset + di_val] = (val >> 8) & 0xFF;
-            GetDataStart()[offset + di_val + 1] = val & 0xFF;
+            GetDataStart()[offset + di_val + 1] = (val >> 8) & 0xFF;
+            GetDataStart()[offset + di_val] = val & 0xFF;
             break;
         }
         case 0x6:
@@ -699,8 +706,8 @@ void DOSEmulator::SetModMemVal(short val, char op, bool commit_changes)
             short bp_val = ((registers[BP][0] << 8) & 0xFF) + (registers[BP][1] & 0xFF);
             if (val == NULL)
                 val = (opcodes[ip++] << 8) + opcodes[ip++];
-            GetDataStart()[offset + bp_val] = (val >> 8) & 0xFF;
-            GetDataStart()[offset + bp_val + 1] = val & 0xFF;
+            GetDataStart()[offset + bp_val + 1] = (val >> 8) & 0xFF;
+            GetDataStart()[offset + bp_val] = val & 0xFF;
             break;
         }
         case 0x7:
@@ -708,8 +715,8 @@ void DOSEmulator::SetModMemVal(short val, char op, bool commit_changes)
             short bx_val = ((registers[BX][BH] << 8) & 0xFF) + (registers[BX][BL] & 0xFF);
             if (val == NULL)
                 val = (opcodes[ip++] << 8) + opcodes[ip++];
-            GetDataStart()[offset + bx_val] = (val >> 8) & 0xFF;
-            GetDataStart()[offset + bx_val + 1] = val & 0xFF;
+            GetDataStart()[offset + bx_val + 1] = (val >> 8) & 0xFF;
+            GetDataStart()[offset + bx_val] = val & 0xFF;
             break;
         }
         default:
@@ -1229,6 +1236,19 @@ void DOSEmulator::PerformInterrupt(char val)
             send_ping_and_char_async("set_background_color", registers[BX][BL]);
             break;
         }
+        case 0xc:
+        {
+            std::string send("draw_pixel::");
+
+            send.append(std::to_string(registers[AX][AL]));
+            send.append("::");
+            send.append(std::to_string((registers[CX][CH] << 8) + registers[CX][CL]));
+            send.append("::");
+            send.append(std::to_string((registers[DX][DH] << 8) + registers[DX][DL]));
+
+            send_ping_async((char *)send.c_str());
+            break;
+        }
         default:
             fprintf(stdout, "Not yet Implemented: %02x\n", registers[AX][AH]);
             break;
@@ -1243,6 +1263,23 @@ void DOSEmulator::PerformInterrupt(char val)
         {
             // AH needs to be set to BIOS scan code
             registers[AX][AL] = get_char_async();
+            printf("Scan code: %c", registers[AX][AL]);
+            break;
+        }
+        case 0x1:
+        {
+            char val = get_char_async(true);
+
+            if (!val)
+            {
+                flags[ZF] = 1;
+            }
+            else
+            {
+                registers[AX][AL] = val;
+                flags[ZF] = 0;
+            }
+
             break;
         }
         default:
@@ -1334,6 +1371,13 @@ bool DOSEmulator::CheckIfCarry(char val1, char val2, char operation)
             val = true;
         break;
     }
+    case ADDITION:
+    {
+        // If the first bit is 1 and then becomes 0 we had to carry
+        if ((val2 & 0x8) == 8 && !((val2 + val1) & 0x8))
+            val = true;
+        break;
+    }
     default:
         fprintf(stdout, "Check carry not implemented\n");
         break;
@@ -1376,6 +1420,18 @@ bool DOSEmulator::CheckIfZero(char val1, char val2, char operation)
             val = true;
         break;
     }
+    case ADDITION:
+    {
+        if (!(val2 + val1))
+            val = true;
+        break;
+    }
+    case XOR:
+    {
+        if (!(val2 ^ val1))
+            val = true;
+        break;
+    }
     default:
         fprintf(stdout, "Check zero not implemented\n");
         break;
@@ -1391,6 +1447,18 @@ bool DOSEmulator::CheckIfSign(char val1, char val2, char operation)
     case SUBTRACTION:
     {
         if ((val1 - val2) < 0)
+            val = true;
+        break;
+    }
+    case ADDITION:
+    {
+        if ((val1 + val2) < 0)
+            val = true;
+        break;
+    }
+    case XOR:
+    {
+        if ((val1 ^ val2) < 0)
             val = true;
         break;
     }
@@ -1433,6 +1501,12 @@ bool DOSEmulator::CheckIfOverflow(char val1, char val2, char operation)
     case SUBTRACTION:
     {
         if ((val1 - val2) > val1)
+            val = true;
+        break;
+    }
+    case ADDITION:
+    {
+        if ((val1 + val2) < val1 || (val1 + val2) < val2)
             val = true;
         break;
     }
@@ -1626,7 +1700,12 @@ void DOSEmulator::RunCode()
         }
         case 0x1:
         {
-            printf("Not Yet Implemented: %2x\n", op);
+            op = opcodes[ip++];
+            short val1 = GetModMemVal(op, false);
+            short val2 = (registers[GetRegister(op)][0] << 8) + registers[GetRegister(op)][1];
+            UpdateFlags(val1, val2, ADDITION);
+            SetModMemVal(val1 + val2, op, true);
+
                 break;
         }
         case 0x2:
@@ -1636,12 +1715,25 @@ void DOSEmulator::RunCode()
         }
         case 0x3:
         {
-            printf("Not Yet Implemented: %2x\n", op);
+            op = opcodes[ip++];
+            short val1 = (registers[GetRegister(op)][0] << 8) + registers[GetRegister(op)][1];
+            short val2 = GetModMemVal(op, true);
+            UpdateFlags(val1, val2, ADDITION);
+            
+            short result = val1 + val2;
+
+            registers[GetRegister(op)][0] = (result >> 8) & 0xFF;
+            registers[GetRegister(op)][1] = result & 0xFF;
+
             break;
         }
         case 0x4:
         {
-            printf("Not Yet Implemented: %2x\n", op);
+            char val = opcodes[ip++];
+
+            UpdateFlags(registers[AX][AL], val, ADDITION);
+            registers[AX][AL] = val;
+
             break;
         }
         case 0x5:
@@ -1826,7 +1918,16 @@ void DOSEmulator::RunCode()
         }
         case 0x29:
         {
-            printf("Not Yet Implemented: %2x\n", op);
+            op = opcodes[ip++];
+
+            short val1 = GetModMemVal(op, false);
+            short val2 = (registers[GetRegister(op)][0] << 8) + registers[GetRegister(op)][1];
+
+            UpdateFlags(val1, val2, SUBTRACTION);
+
+            short result = val1 - val2;
+
+            SetModMemVal(val1 - val2, op, true);
             break;
         }
         case 0x2a:
@@ -1890,7 +1991,15 @@ void DOSEmulator::RunCode()
         }
         case 0x33:
         {
-            printf("Not Yet Implemented: %2x\n", op);
+            op = opcodes[ip++];
+            short val1 = (registers[GetRegister(op)][0] << 8) + registers[GetRegister(op)][1];
+            short val2 = GetModMemVal(op, true);
+            UpdateFlags(val1, val2, XOR);
+            
+            short result = val1 ^ val2;
+
+            registers[GetRegister(op)][0] = (result >> 8) & 0xFF;
+            registers[GetRegister(op)][1] = result & 0xFF;
             break;
         }
         case 0x34:
@@ -1920,7 +2029,10 @@ void DOSEmulator::RunCode()
         }
         case 0x39:
         {
-            printf("Not Yet Implemented: %2x\n", op);
+            op = opcodes[ip++];
+
+            UpdateFlags(GetModMemVal(op, true), registers[GetRegister(op) % 4][GetRegister(op) <= 3], SUBTRACTION);
+
             break;
         }
         case 0x3a:
@@ -1932,7 +2044,9 @@ void DOSEmulator::RunCode()
         }
         case 0x3b:
         {
-            printf("Not Yet Implemented: %2x\n", op);
+            op = opcodes[ip++];
+
+            UpdateFlags(registers[GetRegister(op) % 4][GetRegister(op) <= 3], GetModMemVal(op, true), SUBTRACTION);
             break;
         }
         case 0x3c:
@@ -1959,83 +2073,33 @@ void DOSEmulator::RunCode()
             break;
         }
         case 0x40:
-        {
-            printf("Not Yet Implemented: %2x\n", op);
-            break;
-        }
         case 0x41:
-        {
-            printf("Not Yet Implemented: %2x\n", op);
-            break;
-        }
         case 0x42:
-        {
-            printf("Not Yet Implemented: %2x\n", op);
-            break;
-        }
         case 0x43:
-        {
-            printf("Not Yet Implemented: %2x\n", op);
-            break;
-        }
         case 0x44:
-        {
-            printf("Not Yet Implemented: %2x\n", op);
-            break;
-        }
         case 0x45:
-        {
-            printf("Not Yet Implemented: %2x\n", op);
-            break;
-        }
         case 0x46:
-        {
-            printf("Not Yet Implemented: %2x\n", op);
-            break;
-        }
         case 0x47:
         {
-            printf("Not Yet Implemented: %2x\n", op);
+            char reg = op - 0x40;
+            short val = (registers[reg][0] << 8) + registers[reg][1] + 1;
+            registers[reg][0] = (val >> 8) & 0xFF;
+            registers[reg][1] = val & 0xFF;
             break;
         }
         case 0x48:
-        {
-            printf("Not Yet Implemented: %2x\n", op);
-            break;
-        }
         case 0x49:
-        {
-            printf("Not Yet Implemented: %2x\n", op);
-            break;
-        }
         case 0x4a:
-        {
-            printf("Not Yet Implemented: %2x\n", op);
-            break;
-        }
         case 0x4b:
-        {
-            printf("Not Yet Implemented: %2x\n", op);
-            break;
-        }
         case 0x4c:
-        {
-            printf("Not Yet Implemented: %2x\n", op);
-            break;
-        }
         case 0x4d:
-        {
-            printf("Not Yet Implemented: %2x\n", op);
-            break;
-        }
         case 0x4e:
-        {
-            printf("Not Yet Implemented: %2x\n", op);
-            break;
-        }
         case 0x4f:
         {
-            printf("Not Yet Implemented: %2x\n", op);
+            char reg = op - 0x40;
+            short val = (registers[reg][0] << 8) + registers[reg][1] - 1;
+            registers[reg][0] = (val >> 8) & 0xFF;
+            registers[reg][1] = val & 0xFF;
             break;
         }
         case 0x50:
@@ -2217,17 +2281,23 @@ void DOSEmulator::RunCode()
         }
         case 0x7d:
         {
-            printf("Not Yet Implemented: %2x\n", op);
+            op = opcodes[ip++];
+            if (flags[SF] == flags[OF])
+                ip += (char)op;
             break;
         }
         case 0x7e:
         {
-            printf("Not Yet Implemented: %2x\n", op);
+            op = opcodes[ip++];
+            if (flags[ZF] || flags[SF] != flags[OF])
+                ip += (char)op;
             break;
         }
         case 0x7f:
         {
-            printf("Not Yet Implemented: %2x\n", op);
+            op = opcodes[ip++];
+            if (!flags[ZF] && flags[SF] == flags[OF])
+                ip += (char)op;
             break;
         }
         case 0x80:
@@ -2320,6 +2390,7 @@ void DOSEmulator::RunCode()
             op = opcodes[ip++];
 
             short val = GetModMemVal(op, true);
+            
             registers[GetRegister(op)][1] = val & 0xFF;
             registers[GetRegister(op)][0] = (val >> 8) & 0xFF;
 
@@ -2436,7 +2507,9 @@ void DOSEmulator::RunCode()
         }
         case 0xa0:
         {
-            printf("Not Yet Implemented: %2x\n", op);
+            short offset = opcodes[ip++] + (opcodes[ip++] << 8);
+            
+            registers[AX][AL] = GetDataStart()[offset];
             break;
         }
         case 0xa1:
@@ -2455,7 +2528,10 @@ void DOSEmulator::RunCode()
         }
         case 0xa3:
         {
-            printf("Not Yet Implemented: %2x\n", op);
+            short offset = opcodes[ip++] + (opcodes[ip++] << 8);
+            
+            GetDataStart()[offset + 1] = registers[AX][AH];
+            GetDataStart()[offset] = registers[AX][AL];
             break;
         }
         case 0xa4:
@@ -2860,7 +2936,19 @@ void DOSEmulator::RunCode()
         }
         case 0xf7:
         {
-            printf("Not Yet Implemented: %2x\n", op);
+            op = opcodes[ip++];
+
+            switch (GetRegister(op))
+            {
+                case NEG:
+                {
+                    SetModMemVal8(~GetModMemVal8(op, false), op, true);
+                    break;
+                }
+                default:
+                    printf("Not Yet Implemented f7: %2x\n", op);
+                    break;
+            }
             break;
         }
         case 0xf8:
@@ -2895,7 +2983,17 @@ void DOSEmulator::RunCode()
         }
         case 0xfe:
         {
-            printf("Not Yet Implemented: %2x\n", op);
+            op = opcodes[ip++];
+
+            if (GetRegister(op) == INC)
+            {
+                SetModMemVal8(GetModMemVal8(op, false) + 1, op, true);
+            }
+            else if (GetRegister(op) == DEC)
+            {
+                SetModMemVal8(GetModMemVal8(op, false) - 1, op, true);
+            }
+
             break;
         }
         case 0xff:

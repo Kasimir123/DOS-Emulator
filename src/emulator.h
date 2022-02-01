@@ -41,8 +41,14 @@
 
 #define SCASB 0xae
 
+#define NEG 3
+
+#define INC 0
+#define DEC 1
+
 #define ADDITION 0
 #define SUBTRACTION 1
+#define XOR 2
 
 #define WRITE_CHAR_STDOUT 0x2
 #define READ_CHAR_STDIN_NOECHO 0x8

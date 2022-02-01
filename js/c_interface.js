@@ -3,6 +3,7 @@ let open_success = null;
 let get_char_success = null;
 let get_char_b = false;
 let video_mode = false;
+let cur_key = '\x00';
 
 const fileSelector = document.getElementById('file-selector');
 fileSelector.addEventListener('change', (event) => {
@@ -34,16 +35,26 @@ function get_char(success) {
     get_char_b = true;
 }
 
+function get_char_now(success) {
+    success(cur_key);
+}
+
+document.addEventListener('keydown', (e) => {
+    e = e || window.event;
+
+    cur_key = e.key;
+
+}, false);
 
 
 document.addEventListener('keyup', (e) => {
     e = e || window.event;
 
-    if (get_char_b)
-    {
+    cur_key = '\x00';
 
-        if (e.key.length == 1)
-        {
+    if (get_char_b) {
+
+        if (e.key.length == 1) {
             get_char_success(e.key);
             get_char_b = false;
         }
@@ -76,11 +87,11 @@ document.addEventListener('keyup', (e) => {
 }, false);
 
 
-    function emscripten_sleep(ms) {
-        Asyncify.handleSleep(function (wakeUp) {
-            setTimeout(wakeUp, ms);
-        });
-    }
+function emscripten_sleep(ms) {
+    Asyncify.handleSleep(function (wakeUp) {
+        setTimeout(wakeUp, ms);
+    });
+}
 
 var re = /^___terminal::/;
 // XHR proxy that handle methods from fetch in C
@@ -139,18 +150,25 @@ window.XMLHttpRequest = (function (xhr) {
                                     }
                                 );
                             }
+                            else if (payload[1] == 'get_char_now') {
+                                console.log("get_char_now");
+                                get_char_now(
+                                    function (text) {
+                                        props.responseText = text + '\0';
+                                        target.onload();
+                                    }
+                                );
+                            }
                             else if (payload[1] == 'write') {
-                                if (video_mode)
-                                {
+                                if (video_mode) {
                                     context.font = "15px Comic Sans MS";
                                     context.fillStyle = "red";
                                     context.fillText(payload[2], Number(payload[3]) * 10, Number(payload[4]) * 10);
                                 }
-                                else
-                                {
+                                else {
                                     $("#program_output").val($("#program_output").val() + payload[2]);
                                 }
-                                
+
                             }
                             else if (payload[1] == 'activate_video_mode') {
                                 video_mode = true;
@@ -160,15 +178,21 @@ window.XMLHttpRequest = (function (xhr) {
 
                             }
                             else if (payload[1] == 'set_background_color') {
-                                for (let i = 0; i < w; i++)
-                                {
-                                    for (let j = 0; j < h; j++)
-                                    {
+                                for (let i = 0; i < w; i++) {
+                                    for (let j = 0; j < h; j++) {
                                         drawPixel(imagedata, i, j, colors[Number(payload[2])]);
                                     }
                                 }
                                 context.putImageData(imagedata, 0, 0);
 
+                            }
+                            else if (payload[1] == 'draw_pixel') {
+                                let col = Number(payload[3]);
+                                let row = Number(payload[4]);
+                                console.log("draw pixel: " + payload[2] + " " + payload[3] + " " + payload[4]);
+                                drawPixel(imagedata, col, row, colors[Number(payload[2])]);
+
+                                context.putImageData(imagedata, 0, 0);
                             }
 
                         } else {
