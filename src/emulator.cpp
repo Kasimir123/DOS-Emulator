@@ -9,9 +9,13 @@
 #include "unistd.h"
 #include <sys/time.h>
 
+// char pointer for the data we get from the frontend
 char *read_data;
+
+// boolean to see if we have gotten the data
 bool ready;
 
+// Function that gets called if we successfully received data
 void read_success(emscripten_fetch_t *fetch)
 {
     if (read_data)
@@ -21,6 +25,7 @@ void read_success(emscripten_fetch_t *fetch)
 
     memcpy(read_data, fetch->data, fetch->numBytes);
 
+    // append a newline and string terminator, this is for command parsing
     read_data[fetch->numBytes - 1] = '\n';
     read_data[fetch->numBytes] = '\0';
 
@@ -28,11 +33,13 @@ void read_success(emscripten_fetch_t *fetch)
     emscripten_fetch_close(fetch);
 }
 
+// function that gets called on failure
 void read_fail(emscripten_fetch_t *fetch)
 {
     emscripten_fetch_close(fetch);
 }
 
+// read data from the frontend
 char *read_async()
 {
 
@@ -54,6 +61,7 @@ char *read_async()
     return read_data;
 }
 
+// get a character from the frontend
 char get_char_async(bool wait = false)
 {
     ready = false;
@@ -81,6 +89,7 @@ char get_char_async(bool wait = false)
     return read_data[0];
 }
 
+// send a message and a character to the frontend
 void send_ping_and_char_async(char *command, char c)
 {
     emscripten_fetch_attr_t attr;
@@ -99,6 +108,7 @@ void send_ping_and_char_async(char *command, char c)
     emscripten_fetch(&attr, url.c_str());
 }
 
+// send a message to the frontend
 void send_ping_async(char *command)
 {
     emscripten_fetch_attr_t attr;
@@ -113,6 +123,7 @@ void send_ping_async(char *command)
     emscripten_fetch(&attr, url.c_str());
 }
 
+// print the dos header
 void PrintHeader(DOS_HEADER *header)
 {
 
@@ -142,12 +153,15 @@ void PrintHeader(DOS_HEADER *header)
     }
 }
 
+
+// calculate the start address 
 int DOSEmulator::CalculateStartAddress()
 {
     RELOCATION *start_rel = (RELOCATION *)((char *)header + header->relocpos);
     return (16 * header->hdrsize) + (start_rel->segment_value * 16);
 }
 
+// prints information about the registers and flags
 void DOSEmulator::PrintStack()
 {
     fprintf(stdout, "Stack:\n");
@@ -181,6 +195,7 @@ void DOSEmulator::PrintStack()
     fprintf(stdout, "\t\tOF: %d\n", flags[OF] ? 1 : 0);
 }
 
+// clears the registers
 void DOSEmulator::ClearRegisters()
 {
     for (int i = 0; i < 8; i++)
@@ -196,6 +211,7 @@ void DOSEmulator::ClearRegisters()
     }
 }
 
+// Clears the flags
 void DOSEmulator::ClearFlags()
 {
     for (int i = 0; i < 8; i++)
@@ -204,6 +220,8 @@ void DOSEmulator::ClearFlags()
     }
 }
 
+
+// Clears the registers and then parses the header to set certain registers
 void DOSEmulator::SetRegistersFromHeader()
 {
     ClearRegisters();
@@ -224,21 +242,25 @@ void DOSEmulator::SetRegistersFromHeader()
     ip = header->ip;
 }
 
+// Get a register from an opcode
 short DOSEmulator::GetRegister(char op)
 {
     return ((op >> 3) & 0x7);
 }
 
+// Get the mod register value from an opcode
 short DOSEmulator::GetModRegister(char op)
 {
     return (op & 0x7);
 }
 
+// Get the mod value from an opcode
 char DOSEmulator::GetModValue(char op)
 {
     return ((op >> 6) & 0x3);
 }
 
+// Gets the start of the data segment 
 unsigned char *DOSEmulator::GetDataStart(short reg = DS)
 {
     short ds_val = ((special_registers[reg][0] & 0xFF) << 8) + (special_registers[reg][1] & 0xFF);
@@ -246,6 +268,7 @@ unsigned char *DOSEmulator::GetDataStart(short reg = DS)
     return data + (header->hdrsize * 16) + (ds_val * 16);
 }
 
+// Gets the Mod R/M value for 16 bit
 short DOSEmulator::GetModMemVal(char op, bool commit_changes)
 {
     short val = 0;
@@ -457,6 +480,7 @@ short DOSEmulator::GetModMemVal(char op, bool commit_changes)
     return val;
 }
 
+// Sets the Mod R/M value for 16 bit
 void DOSEmulator::SetModMemVal(short val, char op, bool commit_changes)
 {
 
@@ -738,6 +762,7 @@ void DOSEmulator::SetModMemVal(short val, char op, bool commit_changes)
         ip = start_ip;
 }
 
+// Gets the Mod R/M value for 8 bit
 char DOSEmulator::GetModMemVal8(char op, bool commit_changes)
 {
     char val = 0;
@@ -953,6 +978,7 @@ char DOSEmulator::GetModMemVal8(char op, bool commit_changes)
     return val;
 }
 
+// Sets the Mod R/M value for 8 bit
 void DOSEmulator::SetModMemVal8(char val, char op, bool commit_changes)
 {
     int start_ip = ip;
@@ -1209,6 +1235,7 @@ void DOSEmulator::SetModMemVal8(char val, char op, bool commit_changes)
         ip = start_ip;
 }
 
+// Performs DOS interrupts
 void DOSEmulator::PerformInterrupt(char val)
 {
     switch (val)
@@ -1268,7 +1295,6 @@ void DOSEmulator::PerformInterrupt(char val)
         {
             // AH needs to be set to BIOS scan code
             registers[AX][AL] = get_char_async();
-            printf("Scan code: %c", registers[AX][AL]);
             break;
         }
         case 0x1:
@@ -1364,6 +1390,7 @@ void DOSEmulator::PerformInterrupt(char val)
     }
 }
 
+// Checks if the carry flag should be set
 bool DOSEmulator::CheckIfCarry(unsigned short val1, unsigned short val2, char operation)
 {
     bool val = false;
@@ -1390,6 +1417,7 @@ bool DOSEmulator::CheckIfCarry(unsigned short val1, unsigned short val2, char op
     return val;
 }
 
+// Checks if the parity flag should be set
 bool DOSEmulator::CheckIfParity(unsigned short val1, unsigned short val2, char operation)
 {
     bool val = false;
@@ -1402,6 +1430,7 @@ bool DOSEmulator::CheckIfParity(unsigned short val1, unsigned short val2, char o
     return val;
 }
 
+// Checks if the auxiliary flag should be set
 bool DOSEmulator::CheckIfAuxiliary(unsigned short val1, unsigned short val2, char operation)
 {
     bool val = false;
@@ -1414,6 +1443,7 @@ bool DOSEmulator::CheckIfAuxiliary(unsigned short val1, unsigned short val2, cha
     return val;
 }
 
+// Checks if the zero flag should be set
 bool DOSEmulator::CheckIfZero(unsigned short val1, unsigned short val2, char operation)
 {
     bool val = false;
@@ -1444,6 +1474,7 @@ bool DOSEmulator::CheckIfZero(unsigned short val1, unsigned short val2, char ope
     return val;
 }
 
+// Checks if the sign flag should be set
 bool DOSEmulator::CheckIfSign(unsigned short val1, unsigned short val2, char operation)
 {
     bool val = false;
@@ -1474,6 +1505,7 @@ bool DOSEmulator::CheckIfSign(unsigned short val1, unsigned short val2, char ope
     return val;
 }
 
+// Checks if the interrupt flag should be set
 bool DOSEmulator::CheckIfInterrupt(unsigned short val1, unsigned short val2, char operation)
 {
     bool val = false;
@@ -1486,6 +1518,7 @@ bool DOSEmulator::CheckIfInterrupt(unsigned short val1, unsigned short val2, cha
     return val;
 }
 
+// Checks if the direction flag should be set
 bool DOSEmulator::CheckIfDirection(unsigned short val1, unsigned short val2, char operation)
 {
     bool val = false;
@@ -1498,6 +1531,7 @@ bool DOSEmulator::CheckIfDirection(unsigned short val1, unsigned short val2, cha
     return val;
 }
 
+// Checks if the overflow flag should be set
 bool DOSEmulator::CheckIfOverflow(unsigned short val1, unsigned short val2, char operation)
 {
     bool val = false;
@@ -1522,6 +1556,7 @@ bool DOSEmulator::CheckIfOverflow(unsigned short val1, unsigned short val2, char
     return val;
 }
 
+// Updates the flags based on the operation
 void DOSEmulator::UpdateFlags(unsigned short val1, unsigned short val2, char operation)
 {
 
@@ -1535,6 +1570,7 @@ void DOSEmulator::UpdateFlags(unsigned short val1, unsigned short val2, char ope
     flags[OF] = CheckIfOverflow(val1, val2, operation);
 }
 
+// Checks if the carry flag should be set 8 bit
 bool DOSEmulator::CheckIfCarry8(unsigned char val1, unsigned char val2, char operation)
 {
     
@@ -1562,16 +1598,19 @@ bool DOSEmulator::CheckIfCarry8(unsigned char val1, unsigned char val2, char ope
     return val;
 }
 
+// Checks if the parity flag should be set 8 bit
 bool DOSEmulator::CheckIfParity8(unsigned char val1, unsigned char val2, char operation)
 {
     
 }
 
+// Checks if the auxiliary flag should be set 8 bit
 bool DOSEmulator::CheckIfAuxiliary8(unsigned char val1, unsigned char val2, char operation)
 {
     
 }
 
+// Checks if the zero flag should be set 8 bit
 bool DOSEmulator::CheckIfZero8(unsigned char val1, unsigned char val2, char operation)
 {
 
@@ -1603,6 +1642,7 @@ bool DOSEmulator::CheckIfZero8(unsigned char val1, unsigned char val2, char oper
     return val;
 }
 
+// Checks if the sign flag should be set 8 bit
 bool DOSEmulator::CheckIfSign8(unsigned char val1, unsigned char val2, char operation)
 {
 
@@ -1634,16 +1674,19 @@ bool DOSEmulator::CheckIfSign8(unsigned char val1, unsigned char val2, char oper
     return val;
 }
 
+// Checks if the interrupt flag should be set 8 bit
 bool DOSEmulator::CheckIfInterrupt8(unsigned char val1, unsigned char val2, char operation)
 {
     
 }
 
+// Checks if the direction flag should be set 8 bit
 bool DOSEmulator::CheckIfDirection8(unsigned char val1, unsigned char val2, char operation)
 {
     
 }
 
+// Checks if the overflow flag should be set 8 bit
 bool DOSEmulator::CheckIfOverflow8(unsigned char val1, unsigned char val2, char operation)
 {
 
@@ -1669,6 +1712,7 @@ bool DOSEmulator::CheckIfOverflow8(unsigned char val1, unsigned char val2, char 
     return val;
 }
 
+// Update flags 8 bit
 void DOSEmulator::UpdateFlags8(unsigned char val1, unsigned char val2, char operation)
 {
 
@@ -1682,6 +1726,7 @@ void DOSEmulator::UpdateFlags8(unsigned char val1, unsigned char val2, char oper
     flags[OF] = CheckIfOverflow8(val1, val2, operation);
 }
 
+// Get all of the tokens from user input
 std::vector<char *> GetTokens(char *line)
 {
     int i = 0;
@@ -1703,6 +1748,7 @@ std::vector<char *> GetTokens(char *line)
     return tokens;
 }
 
+// Debug menu
 void DOSEmulator::DebugMenu()
 {
     fprintf(stdout, "Total Instructions executed: %d\n", instr_executed);
@@ -1723,6 +1769,7 @@ void DOSEmulator::DebugMenu()
             fprintf(stdout, "\tstep (st) <#>: Runs for # amount of instructions\n");
             fprintf(stdout, "\tprint (p): Prints current address and opcode\n");
             fprintf(stdout, "\tpm <#>: Prints memory at region (begin with 0x to display hex)\n");
+            fprintf(stdout, "\tb <#>: Sets breakpoint at address (begin with 0x to display hex)\n");
             fprintf(stdout, "\tc: Continue program execution\n");
             fprintf(stdout, "\thelp (h):   Get a list of commands\n");
         }
@@ -1792,6 +1839,7 @@ void DOSEmulator::DebugMenu()
     }
 }
 
+// push 16 bit value onto stack
 void DOSEmulator::Push(short val)
 {
     short sp_offset = (registers[SP][0] << 8) + registers[SP][1];
@@ -1803,6 +1851,7 @@ void DOSEmulator::Push(short val)
     registers[SP][1] = sp_offset & 0xFF;
 }
 
+// push 8 bit value onto stack
 void DOSEmulator::Push8(char val)
 {
     short sp_offset = (registers[SP][0] << 8) + registers[SP][1];
@@ -1813,6 +1862,7 @@ void DOSEmulator::Push8(char val)
     registers[SP][1] = sp_offset & 0xFF;
 }
 
+// pop 16 bit value from stack
 short DOSEmulator::Pop()
 {
     short sp_offset = (registers[SP][0] << 8) + registers[SP][1];
@@ -1826,6 +1876,7 @@ short DOSEmulator::Pop()
     return val;
 }
 
+// pop 8 bit value from stack
 char DOSEmulator::Pop8()
 {
     short sp_offset = (registers[SP][0] << 8) + registers[SP][1];
@@ -1838,6 +1889,7 @@ char DOSEmulator::Pop8()
     return val;
 }
 
+// check if a breakpoint is set
 bool DOSEmulator::CheckIfBreakpoint(char op)
 {
     for (int i : breakpoints)
@@ -1848,6 +1900,7 @@ bool DOSEmulator::CheckIfBreakpoint(char op)
     return false;
 }
 
+// runs the code
 void DOSEmulator::RunCode()
 {
 
@@ -3192,8 +3245,6 @@ void DOSEmulator::RunCode()
             run = false;
             break;
         }
-        // if (instr_count++ >= 2)
-        //     run = false;
 
         instr_executed++;
 
@@ -3204,6 +3255,7 @@ void DOSEmulator::RunCode()
     }
 }
 
+// Start the emulation
 void DOSEmulator::StartEmulation()
 {
     header = (DOS_HEADER *)data;
