@@ -1,5 +1,6 @@
 #include "./structs.h"
 #include <vector>
+#include "bridge.h"
 
 #define AX 0
 #define CX 1

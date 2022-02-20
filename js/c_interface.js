@@ -93,7 +93,7 @@ function emscripten_sleep(ms) {
     });
 }
 
-var re = /^___terminal::/;
+var re = /^___emulator::/;
 // XHR proxy that handle methods from fetch in C
 window.XMLHttpRequest = (function (xhr) {
     return function () {
@@ -175,6 +175,21 @@ window.XMLHttpRequest = (function (xhr) {
                                 console.log("video mode enabled");
                                 $("#viewport").show();
                                 $("#program_output").hide();
+
+                            }
+                            else if (payload[1] == 'start') {
+                                video_mode = false;
+                                console.log("program started");
+                                $("#program_output").val("Program Output:\n");
+                                $("#viewport").hide();
+                                $("#program_output").show();
+
+                                for (let i = 0; i < w; i++) {
+                                    for (let j = 0; j < h; j++) {
+                                        drawPixel(imagedata, i, j, colors[0xf]);
+                                    }
+                                }
+                                context.putImageData(imagedata, 0, 0);
 
                             }
                             else if (payload[1] == 'set_background_color') {

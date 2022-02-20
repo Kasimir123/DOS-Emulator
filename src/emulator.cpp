@@ -4,124 +4,11 @@
 #include <cstring>
 #include <ostream>
 #include <iostream>
-#include <emscripten/fetch.h>
-#include <string.h>
 #include "unistd.h"
 #include <sys/time.h>
+#include "bridge.h"
 
-// char pointer for the data we get from the frontend
-char *read_data;
 
-// boolean to see if we have gotten the data
-bool ready;
-
-// Function that gets called if we successfully received data
-void read_success(emscripten_fetch_t *fetch)
-{
-    if (read_data)
-        free(read_data);
-
-    read_data = (char *)malloc(sizeof(char) * (fetch->numBytes + 1));
-
-    memcpy(read_data, fetch->data, fetch->numBytes);
-
-    // append a newline and string terminator, this is for command parsing
-    read_data[fetch->numBytes - 1] = '\n';
-    read_data[fetch->numBytes] = '\0';
-
-    ready = true;
-    emscripten_fetch_close(fetch);
-}
-
-// function that gets called on failure
-void read_fail(emscripten_fetch_t *fetch)
-{
-    emscripten_fetch_close(fetch);
-}
-
-// read data from the frontend
-char *read_async()
-{
-
-    ready = false;
-
-    emscripten_fetch_attr_t attr;
-    emscripten_fetch_attr_init(&attr);
-    strcpy(attr.requestMethod, "GET");
-    attr.attributes = EMSCRIPTEN_FETCH_LOAD_TO_MEMORY;
-    attr.onsuccess = read_success;
-    attr.onerror = read_fail;
-    emscripten_fetch(&attr, "___terminal::read");
-
-    while (!ready)
-    {
-        emscripten_sleep(100);
-    }
-
-    return read_data;
-}
-
-// get a character from the frontend
-char get_char_async(bool wait = false)
-{
-    ready = false;
-
-    emscripten_fetch_attr_t attr;
-    emscripten_fetch_attr_init(&attr);
-    strcpy(attr.requestMethod, "GET");
-    attr.attributes = EMSCRIPTEN_FETCH_LOAD_TO_MEMORY;
-    attr.onsuccess = read_success;
-    attr.onerror = read_fail;
-    if (wait)
-    {
-        emscripten_fetch(&attr, "___terminal::get_char_now");
-    }
-    else
-    {
-        emscripten_fetch(&attr, "___terminal::get_char");
-    }
-
-    while (!ready)
-    {
-        emscripten_sleep(100);
-    }
-
-    return read_data[0];
-}
-
-// send a message and a character to the frontend
-void send_ping_and_char_async(char *command, char c)
-{
-    emscripten_fetch_attr_t attr;
-    emscripten_fetch_attr_init(&attr);
-    strcpy(attr.requestMethod, "POST");
-    attr.attributes = EMSCRIPTEN_FETCH_LOAD_TO_MEMORY;
-
-    std::string url("___terminal::");
-
-    url.append(command);
-
-    url.append("::");
-
-    url.append(1, c);
-
-    emscripten_fetch(&attr, url.c_str());
-}
-
-// send a message to the frontend
-void send_ping_async(char *command)
-{
-    emscripten_fetch_attr_t attr;
-    emscripten_fetch_attr_init(&attr);
-    strcpy(attr.requestMethod, "POST");
-    attr.attributes = EMSCRIPTEN_FETCH_LOAD_TO_MEMORY;
-
-    std::string url("___terminal::");
-
-    url.append(command);
-
-    emscripten_fetch(&attr, url.c_str());
-}
 
 // print the dos header
 void PrintHeader(DOS_HEADER *header)
@@ -3258,6 +3145,8 @@ void DOSEmulator::RunCode()
 // Start the emulation
 void DOSEmulator::StartEmulation()
 {
+    send_ping_async("start");
+
     header = (DOS_HEADER *)data;
 
     if (header->signature[0] != 'M' || header->signature[1] != 'Z')
@@ -3273,4 +3162,6 @@ void DOSEmulator::StartEmulation()
     fprintf(stdout, "Runtime: %04x\n", startAddress);
 
     RunCode();
+
+    free(data);
 }
