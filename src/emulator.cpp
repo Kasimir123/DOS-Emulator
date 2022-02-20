@@ -3127,7 +3127,7 @@ void DOSEmulator::RunCode()
             {
             case NEG:
             {
-                SetModMemVal8(~GetModMemVal8(op, false), op, true);
+                SetModMemVal(~GetModMemVal(op, false), op, true);
                 break;
             }
             default:
