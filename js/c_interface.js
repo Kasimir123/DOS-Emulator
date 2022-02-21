@@ -27,7 +27,6 @@ function read(success) {
 
 function open_file(success) {
     open_success = success;
-
 };
 
 function get_char(success) {
@@ -133,9 +132,11 @@ window.XMLHttpRequest = (function (xhr) {
                                 );
                             }
                             else if (payload[1] == 'open_file') {
+                                $("#file-selector").show();
                                 $("#output").val($("#output").val() + "Please Upload a File\n");
                                 open_file(
                                     function (text) {
+                                        $("#file-selector").hide();
                                         props.responseText = text;
                                         target.onload();
                                     }

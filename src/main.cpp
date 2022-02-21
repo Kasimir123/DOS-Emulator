@@ -26,12 +26,10 @@ int main()
     {
         fprintf(stdout, "Which of the following do you wish to run?\n");
         fprintf(stdout, "\t1) HELLOM.EXE: Prints out Hello World\n");
-        fprintf(stdout, "\t2) JMPMOV.EXE\n");
-        fprintf(stdout, "\t3) KEY.EXE: Takes in input, if input is a character then capitalize, if period, exit\n");
-        fprintf(stdout, "\t4) MOV.EXE\n");
-        fprintf(stdout, "\t5) PONG.EXE: Pong video game\n");
-        fprintf(stdout, "\t6) TEST.EXE: Tests moving values around registers and printing as ASCII\n");
-        fprintf(stdout, "\t7) Upload your own file\n");
+        fprintf(stdout, "\t2) KEY.EXE: Takes in input, if input is a character then capitalize, if period, exit\n");
+        fprintf(stdout, "\t3) PONG.EXE: Pong video game\n");
+        fprintf(stdout, "\t4) TEST.EXE: Tests moving values around registers and printing as ASCII\n");
+        fprintf(stdout, "\t5) Upload your own file\n");
 
         char user_input = get_char_async();
 
@@ -43,21 +41,13 @@ int main()
         }
         else if (user_input == '2')
         {
-            buffer = get_buffer("./examples/JMPMOV.EXE");
+            buffer = get_buffer("./examples/KEY.EXE");
         }
         else if (user_input == '3')
         {
-            buffer = get_buffer("./examples/KEY.EXE");
-        }
-        else if (user_input == '4')
-        {
-            buffer = get_buffer("./examples/MOV.EXE");
-        }
-        else if (user_input == '5')
-        {
             buffer = get_buffer("./examples/PONG.EXE");
         }
-        else if (user_input == '6')
+        else if (user_input == '4')
         {
             buffer = get_buffer("./examples/TEST.EXE");
         }
