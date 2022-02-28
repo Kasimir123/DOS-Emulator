@@ -51,7 +51,7 @@ int DOSEmulator::CalculateStartAddress()
 // prints information about the registers and flags
 void DOSEmulator::PrintStack()
 {
-    fprintf(stdout, "Stack:\n");
+    fprintf(stdout, "Status:\n");
 
     fprintf(stdout, "\tRegisters:\n");
     fprintf(stdout, "\t\tAX: %02x %02x", registers[AX][0], registers[AX][1]);
