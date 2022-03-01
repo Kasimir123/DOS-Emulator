@@ -1151,7 +1151,7 @@ void DOSEmulator::PerformInterrupt(char val)
         // This could potentially be slightly wrong
         case 0xb:
         {
-            emscripten_sleep(10);
+            emscripten_sleep(20);
             send_ping_and_char_async("set_background_color", registers[BX][BL]);
             break;
         }

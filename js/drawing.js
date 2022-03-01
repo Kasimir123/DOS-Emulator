@@ -42,26 +42,34 @@ class Color {
 /* utility functions */
 
 // draw a pixel at x,y using color
-function drawPixel(imagedata, x, y, color) {
-    try {
-        if ((typeof (x) !== "number") || (typeof (y) !== "number"))
-            throw "drawpixel location not a number";
-        else if ((x < 0) || (y < 0) || (x >= imagedata.width) || (y >= imagedata.height))
-            throw "drawpixel location outside of image";
-        else if (color instanceof Color) {
-            var pixelindex = (y * imagedata.width + x) * 4;
-            imagedata.data[pixelindex] = color.r;
-            imagedata.data[pixelindex + 1] = color.g;
-            imagedata.data[pixelindex + 2] = color.b;
-            imagedata.data[pixelindex + 3] = color.a;
-        } else
-            throw "drawpixel color is not a Color";
-    } // end try
+// function drawPixel(imagedata, x, y, color) {
+//     try {
+//         if ((typeof (x) !== "number") || (typeof (y) !== "number"))
+//             throw "drawpixel location not a number";
+//         else if ((x < 0) || (y < 0) || (x >= imagedata.width) || (y >= imagedata.height))
+//             throw "drawpixel location outside of image";
+//         else if (color instanceof Color) {
+//             var pixelindex = (y * imagedata.width + x) * 4;
+//             imagedata.data[pixelindex] = color.r;
+//             imagedata.data[pixelindex + 1] = color.g;
+//             imagedata.data[pixelindex + 2] = color.b;
+//             imagedata.data[pixelindex + 3] = color.a;
+//         } else
+//             throw "drawpixel color is not a Color";
+//     } // end try
 
-    catch (e) {
-        console.log(e);
-    }
-} // end drawPixel
+//     catch (e) {
+//         console.log(e);
+//     }
+// } // end drawPixel
+
+function drawPixel(context, x, y, color)
+{
+    context.beginPath();
+    context.fillStyle = color || '#000';
+    context.fillRect(x, y, 2, 2);
+    context.fill();
+}
 
 var canvas = document.getElementById("viewport");
 var context = canvas.getContext("2d");
@@ -69,8 +77,16 @@ var w = context.canvas.width; // as set in html
 var h = context.canvas.height;  // as set in html
 var imagedata = context.createImageData(w, h);
 
+// var colors = {
+//     0x0: new Color(0, 0, 0, 255),
+//     0xf: new Color(255, 255, 255, 255)
+// }
 
 var colors = {
-    0x0: new Color(0, 0, 0, 255),
-    0xf: new Color(255, 255, 255, 255)
+    0x0: 'black',
+    0xf: 'white'
 }
+
+
+
+// context.save();

@@ -156,7 +156,7 @@ char *read_async()
 
     while (!ready)
     {
-        emscripten_sleep(100);
+        emscripten_sleep(50);
     }
 
     return read_data;
@@ -184,7 +184,7 @@ char get_char_async(bool wait)
 
     while (!ready)
     {
-        emscripten_sleep(100);
+        emscripten_sleep(50);
     }
 
     return read_data[0];
